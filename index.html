@@ -178,10 +178,19 @@ footer{text-align:center;color:#bbb;font-size:12px;padding:16px}
       <div class="word-list" id="wordList"></div>
     </div>
   </section>
+
+  <!-- 课程页 -->
+  <section id="screen-courses" class="screen">
+    <h2 class="section">📚 课程</h2>
+    <div class="sub">每晚 20:00 的课程内容都同步在这里 · 点开复习</div>
+    <div id="courseList"></div>
+    <div id="courseDetail" class="hidden"></div>
+  </section>
 </main>
 
 <nav>
   <button class="active" onclick="showScreen('learn')"><span class="icon">🏠</span>学习</button>
+  <button onclick="showCourses()"><span class="icon">📚</span>课程</button>
   <button onclick="startQuiz('mixed')"><span class="icon">🎯</span>练习</button>
   <button onclick="showKana()"><span class="icon">あ</span>五十音</button>
   <button onclick="showWordList()"><span class="icon">📖</span>词库</button>
@@ -257,7 +266,12 @@ const WORDS = [
   {cn:"七点",jp:"しちじ",rom:"shichiji",memo:"7点读しち",cat:"时间"},
   {cn:"六个",jp:"むっつ",rom:"muttsu",memo:"つ系列数词",cat:"数字数量"},
   {cn:"岁",jp:"さい",rom:"sai",memo:"歳",cat:"数字数量"},
-  {cn:"法国",jp:"フランス",rom:"furansu",memo:"France 音译",cat:"国家"}
+  {cn:"法国",jp:"フランス",rom:"furansu",memo:"France 音译",cat:"国家"},
+  {cn:"脸",jp:"かお",rom:"kao",memo:"顔，第2课",cat:"身体"},
+  {cn:"听",jp:"きく",rom:"kiku",memo:"聞く，第2课",cat:"动词"},
+  {cn:"声音",jp:"こえ",rom:"koe",memo:"声，第2课",cat:"身体"},
+  {cn:"鞋",jp:"くつ",rom:"kutsu",memo:"靴，第2课",cat:"衣物物品"},
+  {cn:"外国",jp:"がいこく",rom:"gaikoku",memo:"外国，浊音が，第2课",cat:"国家"}
 ];
 
 /* 五十音图（平假名清音） */
@@ -325,7 +339,7 @@ function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   $('screen-'+name).classList.add('active');
   document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
-  const navMap={learn:0,quiz:1,words:3};
+  const navMap={learn:0,courses:1,quiz:2,words:4};
   if(navMap[name]!==undefined) document.querySelectorAll('nav button')[navMap[name]].classList.add('active');
   if(name==='learn'){ renderToday(); }
 }
@@ -516,6 +530,102 @@ function showResult(level, correct, wrong){
     <div class="cc-item"><div class="n bad">${wrong}</div><div class="l">答错</div></div>
     <div class="cc-item"><div class="n" style="color:var(--yellow)">+${correct*2}</div><div class="l">XP</div></div>`;
   showScreen('result');
+}
+
+/* ============ 课程数据（与 lesson-XX.md 同步） ============ */
+const LESSONS = [
+  {
+    id:1, date:'2026-08-14', title:'平假名「あ行」', tag:'あいうえお + 问候语',
+    kana:[
+      {k:'あ',r:'a',memo:'像「女」字少一横', ex:'あい(爱) あさ(早上)'},
+      {k:'い',r:'i',memo:'像「以」字左半边', ex:'いえ(家) いい(好)'},
+      {k:'う',r:'u',memo:'弯钩像鸟窝', ex:'うえ(上) うみ(海)'},
+      {k:'え',r:'e',memo:'像「元」字少一横', ex:'え(画) えき(车站)'},
+      {k:'お',r:'o',memo:'像「求」字带尾巴', ex:'おかね(钱) おおきい(大)'}
+    ],
+    words:[['あい','ai','爱'],['いえ','ie','家'],['うえ','ue','上面'],['え','e','画'],['おかね','okane','钱']],
+    phrases:['おはよう（ございます）＝早上好','こんにちは＝你好（白天）'],
+    quiz:['「うえ」是什么意思？→ 上面','「爱」的日语假名是？→ あい','早上好怎么说？→ おはよう','钱怎么说？→ おかね']
+  },
+  {
+    id:2, date:'2026-08-15', title:'平假名「か行」+ 浊音 が行', tag:'かきくけこ + がぎぐげご',
+    kana:[
+      {k:'か',r:'ka',memo:'像「力」字加一点', ex:'かお(脸) かさ(伞)'},
+      {k:'き',r:'ki',memo:'像钥匙 key', ex:'きく(听) きって(邮票)'},
+      {k:'く',r:'ku',memo:'像「<」小于号', ex:'くつ(鞋) くも(云)'},
+      {k:'け',r:'ke',memo:'像「汁」字少一横', ex:'けいさつ(警察)'},
+      {k:'こ',r:'ko',memo:'两条横线像口', ex:'こえ(声音) ここ(这里)'}
+    ],
+    dakuon:[
+      ['が','ga','がいこく(外国)'],['ぎ','gi','ぎんこう(银行)'],['ぐ','gu','ぐあい(状态)'],['げ','ge','げんき(元气)'],['ご','go','ごはん(米饭)']
+    ],
+    words:[['かお','kao','脸'],['きく','kiku','听'],['こえ','koe','声音'],['くつ','kutsu','鞋'],['がいこく','gaikoku','外国']],
+    phrases:['か行加两点=浊音，k→g 下巴音'],
+    quiz:['「くつ」是什么意思？→ 鞋','「顔」的假名是？→ かお','か行加两点变成？→ 浊音が行','「げんき」什么意思？→ 有活力/元气']
+  }
+];
+
+/* ============ 课程 ============ */
+function showCourses(){
+  showScreen('courses');
+  $('courseDetail').classList.add('hidden');
+  $('courseList').classList.remove('hidden');
+  let html = '';
+  [...LESSONS].reverse().forEach(L=>{
+    html += `<div class="card" style="cursor:pointer" onclick="openLesson(${L.id})">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-weight:800;font-size:16px">第 ${L.id} 课 · ${L.title}</span>
+        <span style="font-size:12px;color:var(--sub)">${L.date}</span>
+      </div>
+      <div style="font-size:13px;color:var(--blue-dark);margin-top:4px">${L.tag}</div>
+      <div style="font-size:12px;color:#bbb;margin-top:6px">👆 点开复习假名/单词/练习</div>
+    </div>`;
+  });
+  $('courseList').innerHTML = html;
+}
+function openLesson(id){
+  const L = LESSONS.find(x=>x.id===id); if(!L) return;
+  $('courseList').classList.add('hidden');
+  $('courseDetail').classList.remove('hidden');
+  let html = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      <button class="btn white small" onclick="showCourses()">← 返回</button>
+      <div><div style="font-weight:800;font-size:18px">第 ${L.id} 课 · ${L.title}</div>
+      <div style="font-size:12px;color:var(--sub)">${L.date}</div></div></div>`;
+  // 假名
+  html += `<div class="card"><div style="font-weight:700;margin-bottom:8px">假名（点卡片听发音）</div><div class="kana-grid">`;
+  L.kana.forEach(k=>{
+    html += `<div class="kana-cell" onclick="speak('${k.k}')"><div class="k">${k.k}</div><div class="r">${k.r}</div><div style="font-size:9px;color:#999;margin-top:3px">${k.memo}</div></div>`;
+  });
+  html += `</div>`;
+  L.kana.forEach(k=>{
+    html += `<div style="font-size:12px;color:var(--sub);margin-top:6px">${k.k}（${k.r}）${k.ex}</div>`;
+  });
+  html += `</div>`;
+  // 浊音
+  if(L.dakuon){
+    html += `<div class="card"><div style="font-weight:700;margin-bottom:8px">浊音（か行加两点 k→g）</div><div class="kana-grid">`;
+    L.dakuon.forEach(d=>{
+      html += `<div class="kana-cell" onclick="speak('${d[0]}')"><div class="k">${d[0]}</div><div class="r">${d[1]}</div><div style="font-size:9px;color:#999;margin-top:3px">${d[2]}</div></div>`;
+    });
+    html += `</div></div>`;
+  }
+  // 单词
+  html += `<div class="card"><div style="font-weight:700;margin-bottom:8px">今日单词（点词听发音）</div>`;
+  L.words.forEach(w=>{
+    html += `<div class="word-item" style="padding:8px 6px" onclick="speak('${w[0]}')">
+      <span class="jp">${w[0]}</span><span class="cn">${w[2]} · ${w[1]}</span><span style="font-size:15px">🔊</span></div>`;
+  });
+  html += `</div>`;
+  // 短语
+  html += `<div class="card"><div style="font-weight:700;margin-bottom:8px">今日必会</div>`;
+  L.phrases.forEach(p=>{ html += `<div style="font-size:14px;padding:4px 0">• ${p}</div>`; });
+  html += `</div>`;
+  // 练习
+  html += `<div class="card"><div style="font-weight:700;margin-bottom:8px">小练习（心里默答）</div>`;
+  L.quiz.forEach((q,i)=>{ html += `<div style="font-size:14px;padding:4px 0;color:var(--sub)">${i+1}. ${q}</div>`; });
+  html += `</div>`;
+  html += `<button class="btn blue block" onclick="startQuiz('mixed')">🎯 用这些词做练习</button>`;
+  $('courseDetail').innerHTML = html;
 }
 
 /* ============ 五十音 ============ */
