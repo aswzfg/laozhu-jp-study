@@ -108,6 +108,28 @@ h2.section{font-size:20px;font-weight:800;margin:8px 0 4px}
 .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-80px);background:#333;color:#fff;padding:10px 20px;border-radius:12px;font-size:14px;z-index:99;transition:transform .3s;opacity:0}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 
+/* 练习中心 */
+.practice-group{margin-bottom:18px}
+.pg-title{font-size:16px;font-weight:800}
+.pg-sub{font-size:12px;color:var(--sub);margin-bottom:10px}
+.practice-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.practice-item{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:16px 10px;text-align:center;cursor:pointer;transition:all .12s}
+.practice-item:active{transform:scale(.97);background:#f0f0f0}
+.pi-icon{font-size:26px}
+.pi-name{font-size:14px;font-weight:700;margin-top:4px}
+.pi-desc{font-size:11px;color:var(--sub);margin-top:2px}
+
+/* 配对练习 */
+.match-cols{display:flex;gap:12px;margin-top:12px}
+.match-col{flex:1;display:flex;flex-direction:column;gap:10px}
+.match-item{border:2px solid var(--line);border-radius:12px;padding:14px 8px;text-align:center;font-size:17px;font-weight:700;cursor:pointer;transition:all .12s;background:var(--card)}
+.match-item:active{transform:scale(.97)}
+.match-item.sel{border-color:var(--blue);background:#e8f6ff;color:var(--blue-dark)}
+.match-item.ok{border-color:var(--green);background:#d7ffb8;color:var(--green-dark);pointer-events:none}
+.match-item.no{border-color:var(--red);background:#ffdfe0;color:#d33131}
+.match-item.jp{font-size:18px}
+.match-item.cn{font-size:15px;color:var(--text)}
+
 .hidden{display:none!important}
 footer{text-align:center;color:#bbb;font-size:12px;padding:16px}
 </style>
@@ -128,8 +150,8 @@ footer{text-align:center;color:#bbb;font-size:12px;padding:16px}
     <h2 class="section">自由练习</h2>
     <div class="sub">不限课程，从全部词库抽词巩固</div>
     <div class="btn-row">
+      <button class="btn blue" onclick="showPractice()">🎯 练习中心（8 种模式）</button>
       <button class="btn blue" onclick="startFlash()">🃏 闪卡速记</button>
-      <button class="btn blue" onclick="startQuiz('mixed')">🎯 综合练习</button>
     </div>
     <div class="btn-row">
       <button class="btn white" onclick="startQuiz('listen')">👂 听力选词</button>
@@ -182,12 +204,19 @@ footer{text-align:center;color:#bbb;font-size:12px;padding:16px}
     <div id="courseList"></div>
     <div id="courseDetail" class="hidden"></div>
   </section>
+
+  <!-- 练习中心 -->
+  <section id="screen-practice" class="screen">
+    <h2 class="section">🎯 练习中心</h2>
+    <div class="sub">选一种模式开练 · 单词 / 五十音都能练</div>
+    <div id="practiceList"></div>
+  </section>
 </main>
 
 <nav>
   <button class="active" onclick="showScreen('learn')"><span class="icon">🏠</span>学习</button>
   <button onclick="showCourses()"><span class="icon">📚</span>课程</button>
-  <button onclick="startQuiz('mixed')"><span class="icon">🎯</span>练习</button>
+  <button onclick="showPractice()"><span class="icon">🎯</span>练习</button>
   <button onclick="showKana()"><span class="icon">あ</span>五十音</button>
   <button onclick="showWordList()"><span class="icon">📖</span>词库</button>
   <button onclick="showProgress()"><span class="icon">📊</span>进度</button>
@@ -284,6 +313,20 @@ const KANA = [
   {row:"わ行",kana:[["わ","wa"],["を","wo"],["ん","n"],["",""],["",""]]}
 ];
 
+/* 浊音/半浊音（五十音练习用） */
+const DAKUON = [
+  {row:"が行",kana:[["が","ga"],["ぎ","gi"],["ぐ","gu"],["げ","ge"],["ご","go"]]},
+  {row:"ざ行",kana:[["ざ","za"],["じ","ji"],["ず","zu"],["ぜ","ze"],["ぞ","zo"]]},
+  {row:"だ行",kana:[["だ","da"],["ぢ","ji"],["づ","zu"],["で","de"],["ど","do"]]},
+  {row:"ば行",kana:[["ば","ba"],["び","bi"],["ぶ","bu"],["べ","be"],["ぼ","bo"]]},
+  {row:"ぱ行",kana:[["ぱ","pa"],["ぴ","pi"],["ぷ","pu"],["ぺ","pe"],["ぽ","po"]]}
+];
+/* 全部假名：清音46 + 浊音/半浊音25（五十音练习用，jp 字段复用为假名便于通用判题） */
+const KANA_ALL = [
+  ...KANA.flatMap(g=>g.kana.filter(([k])=>k).map(([k,r])=>({k,r,jp:k}))),
+  ...DAKUON.flatMap(g=>g.kana.map(([k,r])=>({k,r,jp:k})))
+];
+
 /* ============ 状态 ============ */
 const LS_KEY = 'cc-jp-state-v1';
 let state = loadState();
@@ -336,7 +379,7 @@ function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   $('screen-'+name).classList.add('active');
   document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
-  const navMap={learn:0,courses:1,quiz:2,words:4};
+  const navMap={learn:0,courses:1,practice:2,words:4};
   if(navMap[name]!==undefined) document.querySelectorAll('nav button')[navMap[name]].classList.add('active');
   if(name==='learn'){ renderToday(); }
 }
@@ -472,6 +515,8 @@ function flashAnswer(known){
 let quizQuestions=[], quizIdx=0, quizCorrect=0, quizStreak=0, quizWrongList=[], quizMode='mixed', quizTotal=0;
 function startQuiz(mode, lessonId){
   quizMode = mode||'mixed';
+  if(quizMode==='kana2rom'||quizMode==='rom2kana'||quizMode==='kanaListen'){ startKanaQuiz(quizMode); return; }
+  if(quizMode==='match'){ startMatchQuiz(lessonId); return; }
   const L = lessonId ? LESSONS.find(x=>x.id===lessonId) : null;
   let words = L ? lessonWords(L) : pickLearningWords(12);
   if(!words.length){ toast('本课还没有单词'); return; }
@@ -493,6 +538,84 @@ function makeQuestion(w, pool, distPool){
   const opts = shuffle([w, ...distractors.slice(0,3)]);
   return {w, type, opts};
 }
+function makeKanaQuestion(w, pool, type){
+  const opts = shuffle([w, ...sample(pool.filter(x=>x.k!==w.k), 3)]);
+  return {w, type, opts};
+}
+function startKanaQuiz(type){
+  const words = sample(KANA_ALL, 10);
+  quizQuestions = words.map(w=>makeKanaQuestion(w, KANA_ALL, type));
+  quizIdx = 0; quizCorrect = 0; quizStreak = 0; quizWrongList = [];
+  quizTotal = quizQuestions.length;
+  showScreen('quiz');
+  renderQuiz();
+}
+
+/* ============ 配对练习 ============ */
+let matchPairs=[], matchLeft=[], matchRight=[], matchSelL=null, matchSelR=null, matchDone=0;
+function startMatchQuiz(lessonId){
+  const L = lessonId ? LESSONS.find(x=>x.id===lessonId) : null;
+  let pool = L ? lessonWords(L) : pickLearningWords(8);
+  if(pool.length<6 && !L) pool = [...pool, ...sample(WORDS.filter(w=>!pool.includes(w)), 6-pool.length)];
+  matchPairs = sample(pool, Math.min(6, pool.length));
+  matchLeft = shuffle(matchPairs.map(w=>w.jp));
+  matchRight = shuffle(matchPairs.map(w=>w.cn));
+  matchSelL = null; matchSelR = null; matchDone = 0;
+  quizCorrect = 0; quizWrongList = [];
+  quizTotal = matchPairs.length;
+  showScreen('quiz');
+  renderMatch();
+}
+function renderMatch(){
+  $('quizProgress').textContent = `配对 ${matchDone}/${matchPairs.length} 对`;
+  $('quizStreak').textContent = `🔥 ${matchDone}`;
+  $('quizBar').style.width = (matchDone/matchPairs.length*100)+'%';
+  let l='', r='';
+  matchLeft.forEach((jp,i)=>{ l += `<div class="match-item jp ${matchSelL===i?'sel':''}" id="mL${i}" onclick="matchClick('L',${i})">${jp}</div>`; });
+  matchRight.forEach((cn,i)=>{ r += `<div class="match-item cn ${matchSelR===i?'sel':''}" id="mR${i}" onclick="matchClick('R',${i})">${cn}</div>`; });
+  $('quizArea').innerHTML = `<div class="quiz-prompt">先点一边，再点另一边配对（日语 ↔ 中文）</div>
+    <div class="match-cols"><div class="match-col">${l}</div><div class="match-col">${r}</div></div>
+    <div id="quizFeedback" style="text-align:center;margin-top:14px;min-height:24px"></div>`;
+}
+function matchClick(side, i){
+  if(side==='L'){
+    if(matchSelL===i){ matchSelL=null; renderMatch(); return; }
+    matchSelL = i;
+  } else {
+    if(matchSelR===i){ matchSelR=null; renderMatch(); return; }
+    matchSelR = i;
+  }
+  if(matchSelL!==null && matchSelR!==null){
+    const jp = matchLeft[matchSelL], cn = matchRight[matchSelR];
+    const pair = matchPairs.find(p=>p.jp===jp);
+    if(pair && pair.cn===cn){
+      $('mL'+matchSelL).classList.add('ok');
+      $('mR'+matchSelR).classList.add('ok');
+      matchDone++; quizCorrect++;
+      $('quizFeedback').innerHTML = `<span style="color:var(--green-dark);font-weight:800">✅ ${jp} = ${cn}</span>`;
+      matchSelL=null; matchSelR=null;
+      setTimeout(()=>{ if(matchDone>=matchPairs.length){ finishMatch(); } else { renderMatch(); } }, 450);
+    } else {
+      $('mL'+matchSelL).classList.add('no');
+      $('mR'+matchSelR).classList.add('no');
+      $('quizFeedback').innerHTML = `<span style="color:var(--red);font-weight:800">❌ ${jp} ≠ ${cn}</span>`;
+      const l=matchSelL, r=matchSelR;
+      setTimeout(()=>{
+        $('mL'+l).classList.remove('no');
+        $('mR'+r).classList.remove('no');
+        matchSelL=null; matchSelR=null;
+        renderMatch();
+      }, 600);
+    }
+  } else {
+    renderMatch();
+  }
+}
+function finishMatch(){
+  state.xp += quizCorrect*2; saveState(); ensureStreak();
+  const pct = Math.round(quizCorrect/quizTotal*100);
+  showResult(pct>=80?'great':(pct>=50?'ok':'keep'), quizCorrect, quizTotal-quizCorrect);
+}
 function renderQuiz(){
   if(quizIdx >= quizQuestions.length){
     state.xp += quizCorrect*2; saveState(); ensureStreak();
@@ -501,27 +624,47 @@ function renderQuiz(){
     return;
   }
   const q = quizQuestions[quizIdx];
-  $('quizProgress').textContent = `第 ${quizIdx+1}/${quizTotal} 题 · ${q.type==='cn2jp'?'看中文选日语':(q.type==='jp2cn'?'看日语选中文':'听音选词')}`;
+  const typeLabel = {cn2jp:'看中文选日语',jp2cn:'看日语选中文',listen:'听音选词',kana2rom:'看假名选读音',rom2kana:'看读音选假名',kanaListen:'听音选假名'}[q.type]||'综合';
+  $('quizProgress').textContent = `第 ${quizIdx+1}/${quizTotal} 题 · ${typeLabel}`;
   $('quizStreak').textContent = `🔥 ${quizStreak}`;
   $('quizBar').style.width = (quizIdx/quizTotal*100)+'%';
 
   let html = '';
+  let optText = o=>o.cn;
   if(q.type==='jp2cn'){
     html = `<div class="quiz-prompt">选出正确的中文意思</div>
       <div class="quiz-target">${q.w.jp}<div class="romaji">${q.w.rom}</div></div>
       <div style="text-align:center;margin-top:6px"><button class="speak-btn" style="width:44px;height:44px;font-size:18px" onclick="speak('${q.w.jp}')">🔊</button></div>`;
+    optText = o=>o.cn;
   } else if(q.type==='cn2jp'){
     html = `<div class="quiz-prompt">选出对应的日语</div>
       <div class="quiz-target" style="font-size:30px">${q.w.cn}</div>`;
-  } else {
+    optText = o=>o.jp;
+  } else if(q.type==='listen'){
     html = `<div class="quiz-prompt">听发音，选出对应的词</div>
       <div style="text-align:center;margin:10px 0">
         <button class="audio-hint" onclick="speak('${q.w.jp}')">🔊 再听一遍</button>
       </div>`;
+    optText = o=>o.cn;
+  } else if(q.type==='kana2rom'){
+    html = `<div class="quiz-prompt">这个假名怎么读？</div>
+      <div class="quiz-target">${q.w.k}</div>
+      <div style="text-align:center;margin-top:6px"><button class="speak-btn" style="width:44px;height:44px;font-size:18px" onclick="speak('${q.w.k}')">🔊</button></div>`;
+    optText = o=>o.r;
+  } else if(q.type==='rom2kana'){
+    html = `<div class="quiz-prompt">选出对应的假名</div>
+      <div class="quiz-target">${q.w.r}</div>`;
+    optText = o=>o.k;
+  } else if(q.type==='kanaListen'){
+    html = `<div class="quiz-prompt">听发音，选出假名</div>
+      <div style="text-align:center;margin:10px 0">
+        <button class="audio-hint" onclick="speak('${q.w.k}')">🔊 再听一遍</button>
+      </div>`;
+    optText = o=>o.k;
   }
   html += `<div class="options">`;
   q.opts.forEach((o,i)=>{
-    html += `<div class="opt" id="opt${i}" onclick="answerQuiz(${i}, this)">${q.type==='jp2cn'||q.type==='listen' ? o.cn : o.jp}</div>`;
+    html += `<div class="opt" id="opt${i}" onclick="answerQuiz(${i}, this)">${optText(o)}</div>`;
   });
   html += `</div><div id="quizFeedback" style="text-align:center;margin-top:14px;min-height:24px"></div>`;
   $('quizArea').innerHTML = html;
@@ -537,20 +680,25 @@ function answerQuiz(i, el){
   });
   if(correct){
     quizCorrect++; quizStreak++;
-    state.mastery[q.w.jp] = (state.mastery[q.w.jp]||0)+1;
-    $('quizFeedback').innerHTML = `<span style="color:var(--green-dark);font-weight:800">✅ 正确！${q.w.cn} = ${q.w.jp}</span>`;
+    if(!q.type.startsWith('kana')) state.mastery[q.w.jp] = (state.mastery[q.w.jp]||0)+1;
+    const fb = q.type.startsWith('kana') ? `✅ 正确！${q.w.k} = ${q.w.r}` : `✅ 正确！${q.w.cn} = ${q.w.jp}`;
+    $('quizFeedback').innerHTML = `<span style="color:var(--green-dark);font-weight:800">${fb}</span>`;
   } else {
     quizStreak = 0;
-    state.mastery[q.w.jp] = Math.max(0,(state.mastery[q.w.jp]||0)-1);
-    state.wrongs[q.w.jp] = (state.wrongs[q.w.jp]||0)+1;
-    if(!quizWrongList.includes(q.w)) quizWrongList.push(q.w);
-    $('quizFeedback').innerHTML = `<span style="color:var(--red);font-weight:800">❌ ${q.w.cn} = ${q.w.jp}（${q.w.rom}）</span>`;
+    if(!q.type.startsWith('kana')){
+      state.mastery[q.w.jp] = Math.max(0,(state.mastery[q.w.jp]||0)-1);
+      state.wrongs[q.w.jp] = (state.wrongs[q.w.jp]||0)+1;
+      if(!quizWrongList.includes(q.w)) quizWrongList.push(q.w);
+    }
+    const fb = q.type.startsWith('kana') ? `❌ ${q.w.k} = ${q.w.r}` : `❌ ${q.w.cn} = ${q.w.jp}（${q.w.rom}）`;
+    $('quizFeedback').innerHTML = `<span style="color:var(--red);font-weight:800">${fb}</span>`;
   }
   state.totalAnswered++; if(correct) state.correctAnswered++; saveState();
   setTimeout(()=>{ quizIdx++; renderQuiz(); }, 1100);
 }
 function retryWrong(){
   if(quizWrongList.length===0){ toast('这次没有错题，太棒了！'); return; }
+  if(quizMode.startsWith('kana')||quizMode==='match'){ toast('此模式暂不支持错题重练'); return; }
   quizQuestions = quizWrongList.map(w=>({w, type:'jp2cn', opts:shuffle([w,...sample(WORDS.filter(x=>x.jp!==w.jp),3)])}));
   quizIdx=0; quizCorrect=0; quizStreak=0; quizWrongList=[];
   quizTotal = quizQuestions.length;
@@ -663,6 +811,35 @@ function openLesson(id, from){
 function backFromLesson(){
   if(lessonReturn==='learn'){ showScreen('learn'); }
   else { showCourses(); }
+}
+
+/* ============ 练习中心 ============ */
+function showPractice(){
+  showScreen('practice');
+  const groups = [
+    {title:'📚 单词练习', sub:'词库巩固，自由抽词', items:[
+      {m:'cn2jp', n:'看中文选日语', d:'见到中文，反应日语', icon:'🇨🇳'},
+      {m:'jp2cn', n:'看日语选中文', d:'见到日语，反应中文', icon:'🇯🇵'},
+      {m:'listen', n:'听力选词', d:'听发音选词', icon:'👂'},
+      {m:'mixed', n:'综合混练', d:'三种题型随机', icon:'🎲'},
+      {m:'match', n:'配对连线', d:'日语 ↔ 中文配对', icon:'🔗'}
+    ]},
+    {title:'🈶 五十音练习', sub:'假名基础 · 清音 + 浊音/半浊音', items:[
+      {m:'kana2rom', n:'看假名选读音', d:'あ → a？', icon:'あ'},
+      {m:'rom2kana', n:'看读音选假名', d:'a → あ？', icon:'a'},
+      {m:'kanaListen', n:'听音辨假名', d:'听发音选假名', icon:'🔊'}
+    ]}
+  ];
+  let html = '';
+  groups.forEach(g=>{
+    html += `<div class="practice-group"><div class="pg-title">${g.title}</div><div class="pg-sub">${g.sub}</div><div class="practice-grid">`;
+    g.items.forEach(it=>{
+      html += `<div class="practice-item" onclick="startQuiz('${it.m}')">
+        <div class="pi-icon">${it.icon}</div><div class="pi-name">${it.n}</div><div class="pi-desc">${it.d}</div></div>`;
+    });
+    html += `</div></div>`;
+  });
+  $('practiceList').innerHTML = html;
 }
 
 /* ============ 五十音 ============ */
