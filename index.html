@@ -124,13 +124,9 @@ footer{text-align:center;color:#bbb;font-size:12px;padding:16px}
 <main>
   <!-- 首页/学习 -->
   <section id="screen-learn" class="screen active">
-    <h2 class="section">今日练习</h2>
-    <div class="sub">每晚 20:00 跟宸宸上课，白天用这个巩固</div>
-    <div class="card">
-      <div id="todayInfo" style="margin-bottom:12px"></div>
-      <button class="btn block" onclick="startFlash()">▶ 开始今日学习</button>
-    </div>
-    <h2 class="section">学习模式</h2>
+    <div id="todayInfo"></div>
+    <h2 class="section">自由练习</h2>
+    <div class="sub">不限课程，从全部词库抽词巩固</div>
     <div class="btn-row">
       <button class="btn blue" onclick="startFlash()">🃏 闪卡速记</button>
       <button class="btn blue" onclick="startQuiz('mixed')">🎯 综合练习</button>
@@ -182,7 +178,7 @@ footer{text-align:center;color:#bbb;font-size:12px;padding:16px}
   <!-- 课程页 -->
   <section id="screen-courses" class="screen">
     <h2 class="section">📚 课程</h2>
-    <div class="sub">每晚 20:00 的课程内容都同步在这里 · 点开复习</div>
+    <div class="sub">每天一课 · 独立可选 · 每晚 20:00 新课自动同步 · 点开任意一天复习</div>
     <div id="courseList"></div>
     <div id="courseDetail" class="hidden"></div>
   </section>
@@ -299,6 +295,7 @@ function loadState(){
 function saveState(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
 
 function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+function todayPadded(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
 
 function ensureStreak(){
   const t = todayStr();
@@ -366,20 +363,60 @@ function pickLearningWords(n){
   if(pool.length>n) pool = pool.slice(0,n);
   return pool;
 }
+function lessonWords(L){
+  return (L.words||[]).map(([jp,rom,cn])=>{
+    return WORDS.find(x=>x.jp===jp) || {cn, jp, rom, memo:'', cat:'本课'};
+  });
+}
+function courseListHtml(from){
+  if(!LESSONS.length) return `<div class="card" style="color:var(--sub);text-align:center">还没有课程，今晚 20:00 第一课开讲 🐯</div>`;
+  const today = todayPadded();
+  let html = '';
+  [...LESSONS].reverse().forEach(L=>{
+    const isToday = L.date === today;
+    html += `<div class="card" style="cursor:pointer" onclick="openLesson(${L.id},'${from}')">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
+        <span style="font-weight:800;font-size:16px">第 ${L.id} 课 · ${L.title}
+          ${isToday?'<span style="background:var(--green);color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px">今日</span>':''}</span>
+        <span style="font-size:12px;color:var(--sub)">${L.date}</span>
+      </div>
+      <div style="font-size:13px;color:var(--blue-dark);margin-top:4px">${L.tag}</div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn small" onclick="event.stopPropagation();openLesson(${L.id},'${from}')">📖 复习本课</button>
+        <button class="btn blue small" onclick="event.stopPropagation();startQuiz('mixed',${L.id})">🎯 本课练习</button>
+        <button class="btn white small" onclick="event.stopPropagation();startFlash(${L.id})">🃏 本课闪卡</button>
+      </div>
+    </div>`;
+  });
+  return html;
+}
 function renderToday(){
   const due = WORDS.filter(w=>masteryOf(w.jp)!=='mastered').length;
   const mastered = WORDS.length - due;
-  $('todayInfo').innerHTML =
-    `<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--sub)">
-      <span>词库共 <b style="color:var(--text)">${WORDS.length}</b> 词</span>
-      <span>已掌握 <b style="color:var(--green-dark)">${mastered}</b> · 待学 <b style="color:var(--yellow)">${due}</b></span>
+  const todayL = LESSONS.find(L=>L.date===todayPadded());
+  let html = '';
+  if(todayL){
+    html += `<div class="card" style="border:2px solid var(--green);background:#f6ffef">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
+        <span style="font-weight:800;font-size:16px">📅 今日课程 · 第 ${todayL.id} 课</span>
+        <span style="font-size:12px;color:var(--sub)">${todayL.date}</span>
+      </div>
+      <div style="font-size:13px;color:var(--blue-dark);margin-top:4px">${todayL.title} · ${todayL.tag}</div>
+      <button class="btn block" style="margin-top:12px" onclick="openLesson(${todayL.id},'learn')">▶ 开始今日学习</button>
     </div>`;
+  }
+  html += `<h2 class="section" style="margin-top:16px">📚 全部课程</h2>
+    <div class="sub">每天一课，独立可选 · 点开任意一天复习 · 词库共 ${WORDS.length} 词（已掌握 ${mastered}）</div>`;
+  html += courseListHtml('learn');
+  $('todayInfo').innerHTML = html;
 }
 
 /* ============ 闪卡 ============ */
 let flashWords=[], flashIdx=0, flashFlipped=false, flashDone=0;
-function startFlash(){
-  flashWords = pickLearningWords(10);
+function startFlash(lessonId){
+  let words = lessonId ? lessonWords(LESSONS.find(L=>L.id===lessonId)) : pickLearningWords(10);
+  if(!words.length){ toast('本课还没有单词'); return; }
+  flashWords = words;
   flashIdx = 0; flashDone = 0; flashFlipped = false;
   showScreen('quiz');
   renderFlash();
@@ -433,21 +470,25 @@ function flashAnswer(known){
 
 /* ============ 练习 ============ */
 let quizQuestions=[], quizIdx=0, quizCorrect=0, quizStreak=0, quizWrongList=[], quizMode='mixed', quizTotal=0;
-function startQuiz(mode){
+function startQuiz(mode, lessonId){
   quizMode = mode||'mixed';
-  const words = pickLearningWords(12);
-  quizQuestions = words.map(w=>makeQuestion(w, words));
+  const L = lessonId ? LESSONS.find(x=>x.id===lessonId) : null;
+  let words = L ? lessonWords(L) : pickLearningWords(12);
+  if(!words.length){ toast('本课还没有单词'); return; }
+  const distPool = L ? WORDS : words;
+  quizQuestions = words.map(w=>makeQuestion(w, words, distPool));
   quizIdx = 0; quizCorrect = 0; quizStreak = 0; quizWrongList = [];
   quizTotal = quizQuestions.length;
   showScreen('quiz');
   renderQuiz();
 }
-function makeQuestion(w, pool){
+function makeQuestion(w, pool, distPool){
   const type = quizMode==='listen' ? 'listen' : (quizMode==='mixed' ? ['cn2jp','jp2cn','listen'][Math.floor(Math.random()*3)] : quizMode);
-  // 干扰项：同主题优先，其次随机
-  const sameCat = pool.filter(x=>x.cat===w.cat && x.jp!==w.jp);
+  // 干扰项：同主题优先，其次随机（本课练习从全部词库抽干扰项，保证选项不重复）
+  const dp = distPool || pool;
+  const sameCat = dp.filter(x=>x.cat===w.cat && x.jp!==w.jp);
   let distractors = sample(sameCat, 2);
-  const fill = pool.filter(x=>!sameCat.includes(x) && x.jp!==w.jp);
+  const fill = dp.filter(x=>!sameCat.includes(x) && x.jp!==w.jp);
   while(distractors.length<3 && fill.length){ distractors.push(fill.shift()); }
   const opts = shuffle([w, ...distractors.slice(0,3)]);
   return {w, type, opts};
@@ -570,25 +611,16 @@ function showCourses(){
   showScreen('courses');
   $('courseDetail').classList.add('hidden');
   $('courseList').classList.remove('hidden');
-  let html = '';
-  [...LESSONS].reverse().forEach(L=>{
-    html += `<div class="card" style="cursor:pointer" onclick="openLesson(${L.id})">
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <span style="font-weight:800;font-size:16px">第 ${L.id} 课 · ${L.title}</span>
-        <span style="font-size:12px;color:var(--sub)">${L.date}</span>
-      </div>
-      <div style="font-size:13px;color:var(--blue-dark);margin-top:4px">${L.tag}</div>
-      <div style="font-size:12px;color:#bbb;margin-top:6px">👆 点开复习假名/单词/练习</div>
-    </div>`;
-  });
-  $('courseList').innerHTML = html;
+  $('courseList').innerHTML = courseListHtml('courses');
 }
-function openLesson(id){
+let lessonReturn = 'courses';
+function openLesson(id, from){
   const L = LESSONS.find(x=>x.id===id); if(!L) return;
+  lessonReturn = from || 'courses';
   $('courseList').classList.add('hidden');
   $('courseDetail').classList.remove('hidden');
   let html = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-      <button class="btn white small" onclick="showCourses()">← 返回</button>
+      <button class="btn white small" onclick="backFromLesson()">← 返回</button>
       <div><div style="font-weight:800;font-size:18px">第 ${L.id} 课 · ${L.title}</div>
       <div style="font-size:12px;color:var(--sub)">${L.date}</div></div></div>`;
   // 假名
@@ -624,8 +656,13 @@ function openLesson(id){
   html += `<div class="card"><div style="font-weight:700;margin-bottom:8px">小练习（心里默答）</div>`;
   L.quiz.forEach((q,i)=>{ html += `<div style="font-size:14px;padding:4px 0;color:var(--sub)">${i+1}. ${q}</div>`; });
   html += `</div>`;
-  html += `<button class="btn blue block" onclick="startQuiz('mixed')">🎯 用这些词做练习</button>`;
+  html += `<button class="btn blue block" onclick="startQuiz('mixed',${L.id})">🎯 本课练习（只出本课单词）</button>`;
+  html += `<button class="btn block" style="margin-top:10px" onclick="startFlash(${L.id})">🃏 本课闪卡</button>`;
   $('courseDetail').innerHTML = html;
+}
+function backFromLesson(){
+  if(lessonReturn==='learn'){ showScreen('learn'); }
+  else { showCourses(); }
 }
 
 /* ============ 五十音 ============ */
