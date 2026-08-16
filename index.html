@@ -79,6 +79,11 @@ h2.section{font-size:20px;font-weight:800;margin:8px 0 4px}
 .kana-cell .r{font-size:10px;color:var(--sub);margin-top:2px}
 .kana-row-label{grid-column:1/-1;font-size:12px;font-weight:700;color:var(--sub);margin-top:8px;text-align:left}
 
+/* 五十音切换 tab */
+.kana-tabs{display:flex;gap:8px;margin-bottom:8px}
+.kana-tab{flex:1;background:#fff;border:2px solid var(--line);border-radius:10px;padding:8px;font-size:14px;font-weight:700;color:var(--sub);cursor:pointer}
+.kana-tab.active{border-color:var(--green);background:#d7ffb8;color:var(--green-dark)}
+
 /* 进度 */
 .stat-row{display:flex;gap:10px;margin-bottom:14px}
 .stat{flex:1;background:var(--card);border-radius:14px;padding:14px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.04)}
@@ -158,8 +163,12 @@ footer{text-align:center;color:#bbb;font-size:12px;padding:16px}
       <button class="btn white" onclick="showWordList()">📖 全部词库</button>
     </div>
     <h2 class="section">五十音图</h2>
-    <div class="sub">点卡片听发音，先记平假名</div>
+    <div class="sub">点卡片听发音 · 平假名 / 片假名切换</div>
     <div class="card" style="padding:12px">
+      <div class="kana-tabs">
+        <button class="kana-tab active" id="tabHira" onclick="setKanaTab('hira')">平假名 あ</button>
+        <button class="kana-tab" id="tabKata" onclick="setKanaTab('kata')">片假名 ア</button>
+      </div>
       <div id="kanaTable"></div>
     </div>
   </section>
@@ -313,7 +322,30 @@ const KANA = [
   {row:"わ行",kana:[["わ","wa"],["を","wo"],["ん","n"],["",""],["",""]]}
 ];
 
-/* 浊音/半浊音（五十音练习用） */
+/* 片假名清音 */
+const KATAKANA = [
+  {row:"ア行",kana:[["ア","a"],["イ","i"],["ウ","u"],["エ","e"],["オ","o"]]},
+  {row:"カ行",kana:[["カ","ka"],["キ","ki"],["ク","ku"],["ケ","ke"],["コ","ko"]]},
+  {row:"サ行",kana:[["サ","sa"],["シ","shi"],["ス","su"],["セ","se"],["ソ","so"]]},
+  {row:"タ行",kana:[["タ","ta"],["チ","chi"],["ツ","tsu"],["テ","te"],["ト","to"]]},
+  {row:"ナ行",kana:[["ナ","na"],["ニ","ni"],["ヌ","nu"],["ネ","ne"],["ノ","no"]]},
+  {row:"ハ行",kana:[["ハ","ha"],["ヒ","hi"],["フ","fu"],["ヘ","he"],["ホ","ho"]]},
+  {row:"マ行",kana:[["マ","ma"],["ミ","mi"],["ム","mu"],["メ","me"],["モ","mo"]]},
+  {row:"ヤ行",kana:[["ヤ","ya"],["ユ","yu"],["ヨ","yo"],["",""],["",""]]},
+  {row:"ラ行",kana:[["ラ","ra"],["リ","ri"],["ル","ru"],["レ","re"],["ロ","ro"]]},
+  {row:"ワ行",kana:[["ワ","wa"],["ヲ","wo"],["ン","n"],["",""],["",""]]}
+];
+
+/* 片假名浊音/半浊音 */
+const DAKUON_KATA = [
+  {row:"ガ行",kana:[["ガ","ga"],["ギ","gi"],["グ","gu"],["ゲ","ge"],["ゴ","go"]]},
+  {row:"ザ行",kana:[["ザ","za"],["ジ","ji"],["ズ","zu"],["ゼ","ze"],["ゾ","zo"]]},
+  {row:"ダ行",kana:[["ダ","da"],["ヂ","ji"],["ヅ","zu"],["デ","de"],["ド","do"]]},
+  {row:"バ行",kana:[["バ","ba"],["ビ","bi"],["ブ","bu"],["ベ","be"],["ボ","bo"]]},
+  {row:"パ行",kana:[["パ","pa"],["ピ","pi"],["プ","pu"],["ペ","pe"],["ポ","po"]]}
+];
+
+/* 五十音：全部假名（清音46 + 浊音/半浊音25，平假名） */
 const DAKUON = [
   {row:"が行",kana:[["が","ga"],["ぎ","gi"],["ぐ","gu"],["げ","ge"],["ご","go"]]},
   {row:"ざ行",kana:[["ざ","za"],["じ","ji"],["ず","zu"],["ぜ","ze"],["ぞ","zo"]]},
@@ -321,10 +353,14 @@ const DAKUON = [
   {row:"ば行",kana:[["ば","ba"],["び","bi"],["ぶ","bu"],["べ","be"],["ぼ","bo"]]},
   {row:"ぱ行",kana:[["ぱ","pa"],["ぴ","pi"],["ぷ","pu"],["ぺ","pe"],["ぽ","po"]]}
 ];
-/* 全部假名：清音46 + 浊音/半浊音25（五十音练习用，jp 字段复用为假名便于通用判题） */
+/* 五十音练习题库：平假名与片假名各一套 */
 const KANA_ALL = [
   ...KANA.flatMap(g=>g.kana.filter(([k])=>k).map(([k,r])=>({k,r,jp:k}))),
   ...DAKUON.flatMap(g=>g.kana.map(([k,r])=>({k,r,jp:k})))
+];
+const KANA_ALL_KATA = [
+  ...KATAKANA.flatMap(g=>g.kana.filter(([k])=>k).map(([k,r])=>({k,r,jp:k}))),
+  ...DAKUON_KATA.flatMap(g=>g.kana.map(([k,r])=>({k,r,jp:k})))
 ];
 
 /* ============ 状态 ============ */
@@ -513,9 +549,9 @@ function flashAnswer(known){
 
 /* ============ 练习 ============ */
 let quizQuestions=[], quizIdx=0, quizCorrect=0, quizStreak=0, quizWrongList=[], quizMode='mixed', quizTotal=0;
-function startQuiz(mode, lessonId){
+function startQuiz(mode, lessonId, script){
   quizMode = mode||'mixed';
-  if(quizMode==='kana2rom'||quizMode==='rom2kana'||quizMode==='kanaListen'){ startKanaQuiz(quizMode); return; }
+  if(quizMode==='kana2rom'||quizMode==='rom2kana'||quizMode==='kanaListen'){ startKanaQuiz(quizMode, script); return; }
   if(quizMode==='match'){ startMatchQuiz(lessonId); return; }
   const L = lessonId ? LESSONS.find(x=>x.id===lessonId) : null;
   let words = L ? lessonWords(L) : pickLearningWords(12);
@@ -542,9 +578,10 @@ function makeKanaQuestion(w, pool, type){
   const opts = shuffle([w, ...sample(pool.filter(x=>x.k!==w.k), 3)]);
   return {w, type, opts};
 }
-function startKanaQuiz(type){
-  const words = sample(KANA_ALL, 10);
-  quizQuestions = words.map(w=>makeKanaQuestion(w, KANA_ALL, type));
+function startKanaQuiz(type, script){
+  const pool = script==='kata' ? KANA_ALL_KATA : KANA_ALL;
+  const words = sample(pool, 10);
+  quizQuestions = words.map(w=>makeKanaQuestion(w, pool, type));
   quizIdx = 0; quizCorrect = 0; quizStreak = 0; quizWrongList = [];
   quizTotal = quizQuestions.length;
   showScreen('quiz');
@@ -824,17 +861,20 @@ function showPractice(){
       {m:'mixed', n:'综合混练', d:'三种题型随机', icon:'🎲'},
       {m:'match', n:'配对连线', d:'日语 ↔ 中文配对', icon:'🔗'}
     ]},
-    {title:'🈶 五十音练习', sub:'假名基础 · 清音 + 浊音/半浊音', items:[
-      {m:'kana2rom', n:'看假名选读音', d:'あ → a？', icon:'あ'},
-      {m:'rom2kana', n:'看读音选假名', d:'a → あ？', icon:'a'},
-      {m:'kanaListen', n:'听音辨假名', d:'听发音选假名', icon:'🔊'}
+    {title:'🈶 五十音练习', sub:'平假名 / 片假名分开练 · 含浊音/半浊音', items:[
+      {m:'kana2rom', n:'看假名选读音', d:'あ → a？', icon:'あ', script:'hira'},
+      {m:'rom2kana', n:'看读音选假名', d:'a → あ？', icon:'a', script:'hira'},
+      {m:'kanaListen', n:'听音辨假名', d:'听发音选假名', icon:'🔊', script:'hira'},
+      {m:'kana2rom', n:'看假名选读音', d:'ア → a？', icon:'ア', script:'kata'},
+      {m:'rom2kana', n:'看读音选假名', d:'a → ア？', icon:'a', script:'kata'},
+      {m:'kanaListen', n:'听音辨假名', d:'听发音选假名', icon:'🔊', script:'kata'}
     ]}
   ];
   let html = '';
   groups.forEach(g=>{
     html += `<div class="practice-group"><div class="pg-title">${g.title}</div><div class="pg-sub">${g.sub}</div><div class="practice-grid">`;
     g.items.forEach(it=>{
-      html += `<div class="practice-item" onclick="startQuiz('${it.m}')">
+      html += `<div class="practice-item" onclick="startQuiz('${it.m}', null, '${it.script||'hira'}')">
         <div class="pi-icon">${it.icon}</div><div class="pi-name">${it.n}</div><div class="pi-desc">${it.d}</div></div>`;
     });
     html += `</div></div>`;
@@ -843,9 +883,17 @@ function showPractice(){
 }
 
 /* ============ 五十音 ============ */
+let kanaTab = 'hira';
+function setKanaTab(t){
+  kanaTab = t;
+  $('tabHira').classList.toggle('active', t==='hira');
+  $('tabKata').classList.toggle('active', t==='kata');
+  renderKana();
+}
 function renderKana(){
+  const rows = kanaTab==='hira' ? [...KANA, ...DAKUON] : [...KATAKANA, ...DAKUON_KATA];
   let html = '';
-  KANA.forEach(g=>{
+  rows.forEach(g=>{
     html += `<div class="kana-row-label">${g.row}</div>`;
     g.kana.forEach(([k,r])=>{
       if(!k){ html += `<div></div>`; return; }
