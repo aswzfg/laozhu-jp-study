@@ -998,10 +998,14 @@ function renderKanaFlash(){
       <button class="btn white" onclick="kanaFlashAnswer(false)">🤔 不熟</button>
       <button class="btn" onclick="kanaFlashAnswer(true)">✅ 认识</button>
     </div>`;
+  // 闪卡点开后自动发音
+  speak(w.k);
 }
 function flipKanaFlash(){
   kfFlipped = !kfFlipped;
   $('kfR').classList.toggle('hidden', !kfFlipped);
+  // 翻卡看读音时再读一遍
+  if(kfFlipped) speak(kfWords[kfIdx].k);
 }
 function kanaFlashAnswer(known){
   if(known) kfKnown++;
@@ -1030,7 +1034,8 @@ function renderQuiz(){
     optText = o=>o.cn;
   } else if(q.type==='cn2jp'){
     html = `<div class="quiz-prompt">选出对应的日语</div>
-      <div class="quiz-target" style="font-size:30px">${q.w.cn}</div>`;
+      <div class="quiz-target" style="font-size:30px">${q.w.cn}</div>
+      <div style="text-align:center;margin-top:6px"><button class="speak-btn" style="width:44px;height:44px;font-size:18px" onclick="speak('${q.w.jp}')">🔊</button></div>`;
     optText = o=>o.jp;
   } else if(q.type==='listen'){
     html = `<div class="quiz-prompt">听发音，选出对应的词</div>
@@ -1045,7 +1050,8 @@ function renderQuiz(){
     optText = o=>o.r;
   } else if(q.type==='rom2kana'){
     html = `<div class="quiz-prompt">选出对应的假名</div>
-      <div class="quiz-target">${q.w.r}</div>`;
+      <div class="quiz-target">${q.w.r}</div>
+      <div style="text-align:center;margin-top:6px"><button class="speak-btn" style="width:44px;height:44px;font-size:18px" onclick="speak('${q.w.k}')">🔊</button></div>`;
     optText = o=>o.k;
   } else if(q.type==='kanaListen'){
     html = `<div class="quiz-prompt">听发音，选出假名</div>
@@ -1060,6 +1066,9 @@ function renderQuiz(){
   });
   html += `</div><div id="quizFeedback" style="text-align:center;margin-top:14px;min-height:24px"></div>`;
   $('quizArea').innerHTML = html;
+  // 题目点开后自动发音（如需要可手动点按钮重听）
+  if(q.type==='jp2cn'||q.type==='cn2jp'||q.type==='listen'){ speak(q.w.jp); }
+  else if(q.type==='kana2rom'||q.type==='rom2kana'||q.type==='kanaListen'){ speak(q.w.k); }
 }
 function answerQuiz(i, el){
   const q = quizQuestions[quizIdx];
