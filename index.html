@@ -84,12 +84,21 @@ h2.section{font-size:20px;font-weight:800;margin:8px 0 4px}
 .kana-tab{flex:1;background:#fff;border:2px solid var(--line);border-radius:10px;padding:8px;font-size:14px;font-weight:700;color:var(--sub);cursor:pointer}
 .kana-tab.active{border-color:var(--green);background:#d7ffb8;color:var(--green-dark)}
 
+/* 词库分类维度 */
+.dim-tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.dim-tab{flex:1;min-width:62px;background:#fff;border:2px solid var(--line);border-radius:10px;padding:7px 4px;font-size:12px;font-weight:700;color:var(--sub);cursor:pointer}
+.dim-tab.active{border-color:var(--green);background:#d7ffb8;color:var(--green-dark)}
+.wg{margin-bottom:8px}
+.wg-head{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#f0f0f0;border-radius:10px;cursor:pointer;font-weight:800;font-size:14px}
+.wg-count{font-size:12px;color:var(--sub);font-weight:600;margin-left:auto}
+.wg-body{padding:0 4px}
+
 /* 进度 */
 .stat-row{display:flex;gap:10px;margin-bottom:14px}
 .stat{flex:1;background:var(--card);border-radius:14px;padding:14px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.04)}
 .stat .num{font-size:26px;font-weight:800;color:var(--green-dark)}
 .stat .lbl{font-size:12px;color:var(--sub);margin-top:2px}
-.word-list{max-height:380px;overflow-y:auto}
+.word-list{max-height:none}
 .word-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer}
 .word-item:last-child{border-bottom:none}
 .word-item .jp{font-size:17px;font-weight:700;min-width:110px}
@@ -191,6 +200,13 @@ footer{text-align:center;color:#bbb;font-size:12px;padding:16px}
   <!-- 词库页 -->
   <section id="screen-words" class="screen">
     <h2 class="section">全部词库</h2>
+    <div class="dim-tabs">
+      <button class="dim-tab active" id="dimTabCat" onclick="setWordDim('cat')">📂 主题</button>
+      <button class="dim-tab" id="dimTabPos" onclick="setWordDim('pos')">🏷️ 词性</button>
+      <button class="dim-tab" id="dimTabScript" onclick="setWordDim('script')">🔤 假名</button>
+      <button class="dim-tab" id="dimTabSource" onclick="setWordDim('source')">📌 来源</button>
+      <button class="dim-tab" id="dimTabMastery" onclick="setWordDim('mastery')">🎯 掌握度</button>
+    </div>
     <div class="sub" id="wordCount"></div>
     <div class="card" style="padding:8px 12px">
       <div class="word-list" id="wordList"></div>
@@ -541,6 +557,9 @@ const WORDS = [
   {cn:"英国",jp:"イギリス",rom:"igirisu",memo:"England 音译",cat:"国家"},
   {cn:"韩国",jp:"かんこく",rom:"kankoku",memo:"韓国",cat:"国家"}
 ];
+
+/* 来源标注：前 70 词 = 老朱 Duolingo 输入，其余 = 宸宸 N5 补充（cron 新词追加在末尾，归入 cc） */
+WORDS.forEach((w,i)=>{ if(w.src===undefined) w.src = i < 70 ? 'duo' : 'cc'; });
 
 /* 五十音图（平假名清音） */
 const KANA = [
@@ -1240,21 +1259,96 @@ function renderKanaPractice(){
 }
 function showKana(){ showScreen('kana'); }
 
-/* ============ 词库 ============ */
-function showWordList(){
-  showScreen('words');
-  $('wordCount').textContent = `共 ${WORDS.length} 个单词 · 点词听发音`;
-  let html = '';
+/* ============ 词库（多维分类） ============ */
+const DIM_LABEL = {cat:'主题', pos:'词性', script:'假名', source:'来源', mastery:'掌握度'};
+const ADV_WORDS = ['はい','いいえ','とても','もう','まだ','よく','すこし'];
+const QW_WORDS = ['だれ','いつ','どこ','どうして','どう','いくら','いくつ','どれ','どんな'];
+let wordDim = 'cat';
+let wGroups = [];
+
+function posOf(w){
+  if(w.cat==='动词') return '动词';
+  if(w.cat==='形容词') return '形容词';
+  if(w.cat==='人称代词') return '代词';
+  if(w.cat==='副词疑问'){
+    if(ADV_WORDS.includes(w.jp)) return '副词';
+    if(QW_WORDS.includes(w.jp)) return '疑问词';
+    return '指示词（こそあど）';
+  }
+  return '名词';
+}
+function scriptOf(w){
+  const hasKata = /[ァ-ヶ]/.test(w.jp);
+  const hasHira = /[ぁ-ん]/.test(w.jp);
+  if(hasKata && hasHira) return '混合';
+  return hasKata ? '片假名（外来语）' : '平假名';
+}
+function groupWords(dim){
+  const groups = {};
   WORDS.forEach(w=>{
-    const dot = {new:'dot-new',learning:'dot-learning',mastered:'dot-mastered'}[masteryOf(w.jp)];
-    html += `<div class="word-item" onclick="speak('${w.jp}')">
-      <span class="master-dot ${dot}"></span>
-      <span class="jp">${w.jp}</span>
-      <span class="cn">${w.cn} · ${w.rom}</span>
-      <span style="font-size:16px">🔊</span>
-    </div>`;
+    let key;
+    if(dim==='cat') key = w.cat;
+    else if(dim==='pos') key = posOf(w);
+    else if(dim==='script') key = scriptOf(w);
+    else if(dim==='source') key = w.src==='duo' ? '📱 老朱 Duolingo 输入' : '📚 宸宸 N5 补充';
+    else key = masteryOf(w.jp)==='mastered' ? '🟢 已掌握' : (masteryOf(w.jp)==='learning' ? '🟡 学习中' : '⚪ 未学');
+    (groups[key] = groups[key] || []).push(w);
+  });
+  return groups;
+}
+function setWordDim(d){
+  wordDim = d;
+  ['cat','pos','script','source','mastery'].forEach(x=>{
+    const el = $('dimTab'+x[0].toUpperCase()+x.slice(1));
+    if(el) el.classList.toggle('active', x===d);
+  });
+  renderWordLibrary();
+}
+function renderWordLibrary(){
+  const g = groupWords(wordDim);
+  wGroups = Object.values(g);
+  const keys = Object.keys(g);
+  let html = '';
+  keys.forEach((key, gi)=>{
+    const list = g[key];
+    html += `<div class="wg">
+      <div class="wg-head" onclick="toggleWg(${gi})">
+        <span>${key}</span>
+        <span class="wg-count">${list.length} 词</span>
+        <button class="btn blue small" style="padding:5px 10px;font-size:12px" onclick="event.stopPropagation();practiceGroup(${gi})">▶ 练这组</button>
+      </div>
+      <div class="wg-body" id="wgBody${gi}">`;
+    list.forEach(w=>{
+      const dot = {new:'dot-new',learning:'dot-learning',mastered:'dot-mastered'}[masteryOf(w.jp)];
+      html += `<div class="word-item" onclick="speak('${w.jp}')">
+        <span class="master-dot ${dot}"></span>
+        <span class="jp">${w.jp}</span>
+        <span class="cn">${w.cn} · ${w.rom}</span>
+        <span style="font-size:16px">🔊</span></div>`;
+    });
+    html += `</div></div>`;
   });
   $('wordList').innerHTML = html;
+}
+function toggleWg(i){
+  const el = $('wgBody'+i);
+  if(el) el.classList.toggle('hidden');
+}
+function practiceGroup(gi){
+  const words = wGroups[gi];
+  if(!words || !words.length){ toast('这组还没有词'); return; }
+  quizMode = 'mixed';
+  const picked = words.length>12 ? sample(words, 12) : words;
+  quizQuestions = picked.map(w=>makeQuestion(w, picked, WORDS));
+  quizIdx = 0; quizCorrect = 0; quizStreak = 0; quizWrongList = [];
+  quizTotal = quizQuestions.length;
+  showScreen('quiz');
+  renderQuiz();
+}
+function showWordList(){
+  showScreen('words');
+  $('wordCount').innerHTML = `共 ${WORDS.length} 个单词 · 按${DIM_LABEL[wordDim]}分组 · 点词听发音 · 组标题可折叠`;
+  renderWordLibrary();
 }
 function showProgress(){
   showScreen('words');
@@ -1273,15 +1367,8 @@ function showProgress(){
     <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--sub)">
       <span>🟢 已掌握 ${mastered}</span><span>🟡 学习中 ${learning}</span><span>⚪ 未学 ${fresh}</span>
     </div>
-    <div style="margin-top:10px;font-size:12px;color:#bbb">数据保存在本浏览器，清缓存会丢失</div>`;
-  let html = '';
-  WORDS.forEach(w=>{
-    const dot = {new:'dot-new',learning:'dot-learning',mastered:'dot-mastered'}[masteryOf(w.jp)];
-    html += `<div class="word-item" onclick="speak('${w.jp}')">
-      <span class="master-dot ${dot}"></span>
-      <span class="jp">${w.jp}</span><span class="cn">${w.cn}</span><span style="font-size:14px">🔊</span></div>`;
-  });
-  $('wordList').innerHTML = html;
+    <div style="margin-top:10px;font-size:12px;color:#bbb">数据保存在本浏览器，清缓存会丢失 · 下方按掌握度分组</div>`;
+  setWordDim('mastery');
 }
 
 /* ============ 初始化 ============ */
