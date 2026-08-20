@@ -154,6 +154,7 @@ footer{text-align:center;color:#bbb;font-size:12px;padding:16px}
   <div style="display:flex;align-items:center;gap:8px">
     <div class="streak">🔥<span id="streakNum">0</span></div>
     <div class="xp">⭐ <span id="xpNum">0</span> XP</div>
+    <span id="syncBadge" title="多终端云同步" style="font-size:11px;color:var(--sub)">☁️</span>
   </div>
 </header>
 
@@ -797,13 +798,95 @@ const KANA_ALL_KATA = [
 
 /* ============ 状态 ============ */
 const LS_KEY = 'cc-jp-state-v1';
+const LS_SYNC_KEY = 'cc-jp-sync-v1';
+const CLOUD_BUCKET = 'SqUgXRKbxHvfkiZEV3hVeF'; // kvdb.io 公开桶（多终端云同步）
+const CLOUD_KEY = 'jp-progress-v1';
 let state = loadState();
+let cloudTotal = null; // 云端合并总账（所有终端）
+let syncTimer = null;
 
 function loadState(){
   try{ const s = JSON.parse(localStorage.getItem(LS_KEY)||'null'); if(s) return s; }catch(e){}
   return {xp:0, streak:0, lastDay:'', mastery:{}, wrongs:{}, totalAnswered:0, correctAnswered:0};
 }
-function saveState(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+function saveState(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); scheduleSync(); }
+
+/* ============ 多终端云同步（XP/进度累加统一） ============ */
+function loadSyncBase(){ try{ return JSON.parse(localStorage.getItem(LS_SYNC_KEY)||'null'); }catch(e){ return null; } }
+function saveSyncBase(b){ localStorage.setItem(LS_SYNC_KEY, JSON.stringify(b)); }
+function emptyCloud(){ return {xp:0, streak:0, lastDay:'', mastery:{}, wrongs:{}, totalAnswered:0, correctAnswered:0}; }
+function setBadge(t){ const b=document.getElementById('syncBadge'); if(b){ b.textContent=t; } }
+
+async function cloudGet(){
+  try{
+    const r = await fetch('https://kvdb.io/'+CLOUD_BUCKET+'/'+CLOUD_KEY, {headers:{'Accept':'application/json'}});
+    if(!r.ok) return null;
+    const t = await r.text();
+    try{ return JSON.parse(t); }catch(e){ return null; }
+  }catch(e){ return null; }
+}
+async function cloudPut(obj){
+  try{
+    const r = await fetch('https://kvdb.io/'+CLOUD_BUCKET+'/'+CLOUD_KEY+'?ttl=31536000', {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(obj)});
+    return r.ok;
+  }catch(e){ return false; }
+}
+
+function scheduleSync(){ if(syncTimer) clearTimeout(syncTimer); syncTimer = setTimeout(syncCloud, 3000); }
+
+async function syncCloud(){
+  setBadge('🔄');
+  const base = loadSyncBase() || emptyCloud();
+  let cloud = await cloudGet();
+  if(!cloud) cloud = emptyCloud();
+  // 本地相对基线的增量
+  const dXp = Math.max(0, state.xp - (base.xp||0));
+  const dTotal = Math.max(0, state.totalAnswered - (base.totalAnswered||0));
+  const dCorrect = Math.max(0, state.correctAnswered - (base.correctAnswered||0));
+  // 合并到云端总账：XP/答题数累加，掌握度/错词取并集最大值
+  const merged = {
+    xp: (cloud.xp||0) + dXp,
+    totalAnswered: (cloud.totalAnswered||0) + dTotal,
+    correctAnswered: (cloud.correctAnswered||0) + dCorrect,
+    mastery: Object.assign({}, cloud.mastery||{}),
+    wrongs: Object.assign({}, cloud.wrongs||{})
+  };
+  for(const k in state.mastery){ merged.mastery[k] = Math.max(merged.mastery[k]||0, state.mastery[k]); }
+  for(const k in state.wrongs){ merged.wrongs[k] = Math.max(merged.wrongs[k]||0, state.wrongs[k]); }
+  // 连续天数取较新
+  if((state.lastDay||'') >= (cloud.lastDay||'')){ merged.streak = state.streak; merged.lastDay = state.lastDay; }
+  else { merged.streak = cloud.streak||0; merged.lastDay = cloud.lastDay; }
+  merged.updatedAt = Date.now();
+  const ok = await cloudPut(merged);
+  if(ok){
+    cloudTotal = merged;
+    saveSyncBase({xp:state.xp, streak:state.streak, lastDay:state.lastDay, mastery:Object.assign({},state.mastery), wrongs:Object.assign({},state.wrongs), totalAnswered:state.totalAnswered, correctAnswered:state.correctAnswered});
+    setBadge('☁️');
+    refreshDisplays();
+  } else {
+    setBadge('⚠️');
+  }
+}
+
+// 显示用总账：云端累加值 + 本地最近3秒内未同步增量
+function dispXp(){
+  if(!cloudTotal) return state.xp;
+  const base = loadSyncBase() || emptyCloud();
+  return cloudTotal.xp + Math.max(0, state.xp - (base.xp||0));
+}
+function dispStreak(){
+  if(!cloudTotal) return state.streak;
+  const base = loadSyncBase() || emptyCloud();
+  return (state.lastDay||'') >= (base.lastDay||'') ? state.streak : (cloudTotal.streak||0);
+}
+function dispAnswered(){ if(!cloudTotal) return {t:state.totalAnswered, c:state.correctAnswered}; const b=loadSyncBase()||emptyCloud(); return {t:cloudTotal.totalAnswered + Math.max(0,state.totalAnswered-(b.totalAnswered||0)), c:cloudTotal.correctAnswered + Math.max(0,state.correctAnswered-(b.correctAnswered||0))}; }
+function refreshDisplays(){
+  const s=document.getElementById('streakNum'), x=document.getElementById('xpNum');
+  if(s) s.textContent = dispStreak();
+  if(x) x.textContent = dispXp();
+  const active = document.querySelector('.screen.active');
+  if(active && active.id==='screen-words'){ showProgress(); }
+}
 
 function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
 function todayPadded(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
@@ -818,8 +901,8 @@ function ensureStreak(){
     state.lastDay = t;
     saveState();
   }
-  document.getElementById('streakNum').textContent = state.streak;
-  document.getElementById('xpNum').textContent = state.xp;
+  document.getElementById('streakNum').textContent = dispStreak();
+  document.getElementById('xpNum').textContent = dispXp();
 }
 
 /* ============ 语音 ============ */
@@ -863,7 +946,7 @@ function shuffle(arr){
 }
 function sample(arr,n){ return shuffle(arr).slice(0,n); }
 function masteryOf(jp){
-  const m = state.mastery[jp]||0;
+  const m = Math.max(state.mastery[jp]||0, (cloudTotal&&cloudTotal.mastery)?(cloudTotal.mastery[jp]||0):0);
   return m>=5?'mastered':(m>=1?'learning':'new');
 }
 function pickLearningWords(n){
@@ -1774,11 +1857,12 @@ function showProgress(){
   const mastered = WORDS.filter(w=>masteryOf(w.jp)==='mastered').length;
   const learning = WORDS.filter(w=>masteryOf(w.jp)==='learning').length;
   const fresh = WORDS.length-mastered-learning;
-  const acc = state.totalAnswered ? Math.round(state.correctAnswered/state.totalAnswered*100) : 0;
+  const da = dispAnswered();
+  const acc = da.t ? Math.round(da.c/da.t*100) : 0;
   $('wordCount').innerHTML = `
     <div class="stat-row">
-      <div class="stat"><div class="num">${state.streak}</div><div class="l">🔥 连续天数</div></div>
-      <div class="stat"><div class="num">${state.xp}</div><div class="l">⭐ 总 XP</div></div>
+      <div class="stat"><div class="num">${dispStreak()}</div><div class="l">🔥 连续天数</div></div>
+      <div class="stat"><div class="num">${dispXp()}</div><div class="l">⭐ 总 XP</div></div>
       <div class="stat"><div class="num">${acc}%</div><div class="l">正确率</div></div>
     </div>
     <div style="font-size:13px;color:var(--sub)">词库掌握度</div>
@@ -1786,7 +1870,7 @@ function showProgress(){
     <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--sub)">
       <span>🟢 已掌握 ${mastered}</span><span>🟡 学习中 ${learning}</span><span>⚪ 未学 ${fresh}</span>
     </div>
-    <div style="margin-top:10px;font-size:12px;color:#bbb">数据保存在本浏览器，清缓存会丢失 · 下方按掌握度分组</div>`;
+    <div style="margin-top:10px;font-size:12px;color:#bbb">☁️ 进度自动云端同步，多终端（电脑/手机）经验累加统一 · 下方按掌握度分组</div>`;
   setWordDim('mastery');
 }
 
@@ -1794,6 +1878,8 @@ function showProgress(){
 renderKana();
 renderToday();
 ensureStreak();
+// 首次云同步：拉云端总账合并（多终端累加）
+syncCloud();
 </script>
 </body>
 </html>
