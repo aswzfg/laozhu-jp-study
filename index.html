@@ -197,6 +197,18 @@ footer{text-align:center;color:#bbb;font-size:12px;padding:16px}
     </div>
   </section>
 
+  <!-- 常用语句 -->
+  <section id="screen-sentences" class="screen">
+    <h2 class="section">💬 常用语句</h2>
+    <div class="sub">8 大场景 · 72 句 · 点句子听发音 · 🎤 可跟读打分</div>
+    <div id="sentSceneTabs" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+    <div id="sentList"></div>
+    <div class="btn-row" style="margin-top:6px">
+      <button class="btn blue" onclick="startSentenceQuiz('mixed')">🎯 语句综合练习</button>
+      <button class="btn" onclick="startSpeakQuiz()">🎤 跟读打分</button>
+    </div>
+  </section>
+
   <!-- 词库页 -->
   <section id="screen-words" class="screen">
     <h2 class="section">全部词库</h2>
@@ -252,6 +264,7 @@ footer{text-align:center;color:#bbb;font-size:12px;padding:16px}
   <button onclick="showCourses()"><span class="icon">📚</span>课程</button>
   <button onclick="showPractice()"><span class="icon">🎯</span>练习</button>
   <button onclick="showKana()"><span class="icon">あ</span>五十音</button>
+  <button onclick="showSentences()"><span class="icon">💬</span>语句</button>
   <button onclick="showWordList()"><span class="icon">📖</span>词库</button>
   <button onclick="showProgress()"><span class="icon">📊</span>进度</button>
 </nav>
@@ -608,6 +621,92 @@ const WORDS = [
 /* 来源标注：前 70 词 = 老朱 Duolingo 输入，其余 = 宸宸 N5 补充（cron 新词追加在末尾，归入 cc） */
 WORDS.forEach((w,i)=>{ if(w.src===undefined) w.src = i < 70 ? 'duo' : 'cc'; });
 
+/* ============ 常用语句库（与 sentences.md 同步，2026-08-20 建立） ============ */
+const SENTENCES = [
+  /* 🗣️ 问候寒暄 */
+  {cn:"早上好",jp:"おはようございます",rom:"ohayō gozaimasu",memo:"おはよう+ございます",cat:"问候寒暄"},
+  {cn:"你好",jp:"こんにちは",rom:"konnichiwa",memo:"白天问候，读 ha 写 wa",cat:"问候寒暄"},
+  {cn:"晚上好",jp:"こんばんは",rom:"konbanwa",memo:"晚间问候",cat:"问候寒暄"},
+  {cn:"晚安",jp:"おやすみなさい",rom:"oyasumi nasai",memo:"おやすみ+なさい",cat:"问候寒暄"},
+  {cn:"谢谢",jp:"ありがとうございます",rom:"arigatō gozaimasu",memo:"礼貌感谢",cat:"问候寒暄"},
+  {cn:"再见",jp:"さようなら",rom:"sayōnara",memo:"正式告别；口语用 じゃあね",cat:"问候寒暄"},
+  {cn:"明天见",jp:"またあした",rom:"mata ashita",memo:"また+明日",cat:"问候寒暄"},
+  {cn:"好久不见",jp:"おひさしぶりです",rom:"o-hisashiburi desu",memo:"お+久しぶり+です",cat:"问候寒暄"},
+  {cn:"我出门了",jp:"いってきます",rom:"itte kimasu",memo:"出门时说",cat:"问候寒暄"},
+  {cn:"我回来了",jp:"ただいま",rom:"tadaima",memo:"回家时说；回答 おかえり",cat:"问候寒暄"},
+  /* 🙋 自我介绍 */
+  {cn:"我叫～",jp:"わたしは～です",rom:"watashi wa ～ desu",memo:"私は～です",cat:"自我介绍"},
+  {cn:"初次见面",jp:"はじめまして",rom:"hajimemashite",memo:"自我介绍开场白",cat:"自我介绍"},
+  {cn:"请多关照",jp:"よろしくおねがいします",rom:"yoroshiku onegaishimasu",memo:"拜托了/请多关照",cat:"自我介绍"},
+  {cn:"我来自中国",jp:"ちゅうごくからきました",rom:"Chūgoku kara kimashita",memo:"中国+から+来ました",cat:"自我介绍"},
+  {cn:"我是中国人",jp:"ちゅうごくじんです",rom:"Chūgokujin desu",memo:"中国人+です",cat:"自我介绍"},
+  {cn:"我住在上海",jp:"しゃんはいにすんでいます",rom:"Shanhai ni sunde imasu",memo:"～に住んでいます",cat:"自我介绍"},
+  {cn:"很高兴认识你",jp:"おあいできてうれしいです",rom:"o-ai dekite ureshii desu",memo:"见面+开心",cat:"自我介绍"},
+  {cn:"我喜欢日语",jp:"にほんごがすきです",rom:"Nihongo ga suki desu",memo:"～が好きです",cat:"自我介绍"},
+  /* 🙏 礼貌万能句 */
+  {cn:"谢谢",jp:"ありがとう",rom:"arigatō",memo:"口语版",cat:"礼貌万能"},
+  {cn:"不客气",jp:"どういたしまして",rom:"dō itashimashite",memo:"回应谢谢",cat:"礼貌万能"},
+  {cn:"对不起",jp:"すみません",rom:"sumimasen",memo:"道歉/打扰/劳驾三合一",cat:"礼貌万能"},
+  {cn:"不好意思（亲密）",jp:"ごめんなさい",rom:"gomen nasai",memo:"更亲密的道歉",cat:"礼貌万能"},
+  {cn:"拜托了",jp:"おねがいします",rom:"onegaishimasu",memo:"万能请求句",cat:"礼貌万能"},
+  {cn:"没关系",jp:"だいじょうぶです",rom:"daijōbu desu",memo:"没事/没问题",cat:"礼貌万能"},
+  {cn:"没问题",jp:"もんだいありません",rom:"mondai arimasen",memo:"正式回应",cat:"礼貌万能"},
+  {cn:"请再说一遍",jp:"もういちどおねがいします",rom:"mō ichido onegaishimasu",memo:"没听清时的救星",cat:"礼貌万能"},
+  {cn:"请慢一点说",jp:"ゆっくりはなしてください",rom:"yukkuri hanashite kudasai",memo:"ゆっくり+話して",cat:"礼貌万能"},
+  /* 🍜 点餐购物 */
+  {cn:"请给我这个",jp:"これをください",rom:"kore o kudasai",memo:"点餐万能句",cat:"点餐购物"},
+  {cn:"多少钱？",jp:"いくらですか",rom:"ikura desu ka",memo:"购物必备",cat:"点餐购物"},
+  {cn:"请结账",jp:"おかいけいおねがいします",rom:"o-kaikei onegaishimasu",memo:"お会計(结账)",cat:"点餐购物"},
+  {cn:"请给我菜单",jp:"メニューをください",rom:"menyū o kudasai",memo:"メニュー(menu)",cat:"点餐购物"},
+  {cn:"好吃！",jp:"おいしい！",rom:"oishii!",memo:"赞美食物",cat:"点餐购物"},
+  {cn:"可以刷卡吗？",jp:"カードではらえますか",rom:"kādo de haraemasu ka",memo:"カード+払えます",cat:"点餐购物"},
+  {cn:"有～吗？",jp:"～はありますか",rom:"～ wa arimasu ka",memo:"万能询问",cat:"点餐购物"},
+  {cn:"我要一个～",jp:"～をひとつください",rom:"～ o hitotsu kudasai",memo:"数量+ください",cat:"点餐购物"},
+  {cn:"这个多少钱？",jp:"これはいくらですか",rom:"kore wa ikura desu ka",memo:"指着东西问价",cat:"点餐购物"},
+  /* 🗺️ 问路交通 */
+  {cn:"～在哪里？",jp:"～はどこですか",rom:"～ wa doko desu ka",memo:"万能问位置",cat:"问路交通"},
+  {cn:"车站怎么走？",jp:"えきはどういきますか",rom:"eki wa dō ikimasu ka",memo:"どう行きますか",cat:"问路交通"},
+  {cn:"请告诉我",jp:"おしえてください",rom:"oshiete kudasai",memo:"教えて+ください",cat:"问路交通"},
+  {cn:"坐电车去",jp:"でんしゃでいきます",rom:"densha de ikimasu",memo:"で(交通方式)+行きます",cat:"问路交通"},
+  {cn:"远吗？",jp:"とおいですか",rom:"tōi desu ka",memo:"遠い(远)",cat:"问路交通"},
+  {cn:"在这附近吗？",jp:"このちかくですか",rom:"kono chikaku desu ka",memo:"この近く",cat:"问路交通"},
+  {cn:"右转",jp:"みぎにまがってください",rom:"migi ni magatte kudasai",memo:"右に+曲がって",cat:"问路交通"},
+  {cn:"一直走",jp:"まっすぐいってください",rom:"massugu itte kudasai",memo:"まっすぐ(笔直)",cat:"问路交通"},
+  {cn:"请给我地图",jp:"ちずをください",rom:"chizu o kudasai",memo:"地図(地图)",cat:"问路交通"},
+  /* 🆘 应急表达 */
+  {cn:"帮帮我！",jp:"たすけて！",rom:"tasukete!",memo:"求助第一句",cat:"应急表达"},
+  {cn:"我不明白",jp:"わかりません",rom:"wakarimasen",memo:"不明白",cat:"应急表达"},
+  {cn:"我不会日语",jp:"にほんごがわかりません",rom:"Nihongo ga wakarimasen",memo:"～がわかりません",cat:"应急表达"},
+  {cn:"洗手间在哪里？",jp:"トイレはどこですか",rom:"toire wa doko desu ka",memo:"旅游必备",cat:"应急表达"},
+  {cn:"请叫医生",jp:"いしゃをよんでください",rom:"isha o yonde kudasai",memo:"医者+呼んで",cat:"应急表达"},
+  {cn:"我迷路了",jp:"みちにまよいました",rom:"michi ni mayoimashita",memo:"道+迷いました",cat:"应急表达"},
+  {cn:"我丢了护照",jp:"パスポートをなくしました",rom:"pasupōto o nakushimashita",memo:"パスポート(passport)",cat:"应急表达"},
+  {cn:"请报警",jp:"けいさつをよんでください",rom:"keisatsu o yonde kudasai",memo:"警察+呼んで",cat:"应急表达"},
+  {cn:"我身体不舒服",jp:"きぶんがわるいです",rom:"kibun ga warui desu",memo:"気分+悪い",cat:"应急表达"},
+  {cn:"你说英语吗？",jp:"えいごがはなせますか",rom:"Eigo ga hanasemasu ka",memo:"英語+話せます",cat:"应急表达"},
+  /* ⏰ 数字时间 */
+  {cn:"现在几点？",jp:"いまなんじですか",rom:"ima nan-ji desu ka",memo:"今+何時",cat:"数字时间"},
+  {cn:"现在 3 点",jp:"いまさんじです",rom:"ima san-ji desu",memo:"数字+時",cat:"数字时间"},
+  {cn:"今天几号？",jp:"きょうはなんにちですか",rom:"kyō wa nan-nichi desu ka",memo:"何日(几号)",cat:"数字时间"},
+  {cn:"今天是 8 月 20 日",jp:"きょうははちがつはつかです",rom:"kyō wa hachi-gatsu hatsuka desu",memo:"8月+20日",cat:"数字时间"},
+  {cn:"星期几？",jp:"なんようびですか",rom:"nan-yōbi desu ka",memo:"何曜日",cat:"数字时间"},
+  {cn:"几点开始？",jp:"なんじからですか",rom:"nan-ji kara desu ka",memo:"何時+から",cat:"数字时间"},
+  {cn:"什么时候？",jp:"いつですか",rom:"itsu desu ka",memo:"万能问时间",cat:"数字时间"},
+  {cn:"现在几月？",jp:"いまなんがつですか",rom:"ima nan-gatsu desu ka",memo:"何月",cat:"数字时间"},
+  /* 🌤️ 天气 */
+  {cn:"今天天气很好",jp:"きょうはいいてんきです",rom:"kyō wa ii tenki desu",memo:"いい天気",cat:"天气"},
+  {cn:"天气怎么样？",jp:"てんきはどうですか",rom:"tenki wa dō desu ka",memo:"天気+どうですか",cat:"天气"},
+  {cn:"下雨了",jp:"あめがふっています",rom:"ame ga futte imasu",memo:"雨+降っています",cat:"天气"},
+  {cn:"会下雨吗？",jp:"あめがふりますか",rom:"ame ga furimasu ka",memo:"降ります(下[雨])",cat:"天气"},
+  {cn:"很热",jp:"あついです",rom:"atsui desu",memo:"暑い(天气热)",cat:"天气"},
+  {cn:"很冷",jp:"さむいです",rom:"samui desu",memo:"寒い(天气冷)",cat:"天气"},
+  {cn:"风很大",jp:"かぜがつよいです",rom:"kaze ga tsuyoi desu",memo:"風+強い",cat:"天气"},
+  {cn:"是晴天",jp:"はれです",rom:"hare desu",memo:"晴れ(晴)",cat:"天气"},
+  {cn:"明天会下雨吗？",jp:"あしたはあめですか",rom:"ashita wa ame desu ka",memo:"明日+雨+ですか",cat:"天气"}
+];
+const SENT_CATS = ['问候寒暄','自我介绍','礼貌万能','点餐购物','问路交通','应急表达','数字时间','天气'];
+const SENT_ICONS = {问候寒暄:'🗣️',自我介绍:'🙋',礼貌万能:'🙏',点餐购物:'🍜',问路交通:'🗺️',应急表达:'🆘',数字时间:'⏰',天气:'🌤️'};
+
 /* 五十音图（平假名清音） */
 const KANA = [
   {row:"あ行",kana:[["あ","a"],["い","i"],["う","u"],["え","e"],["お","o"]]},
@@ -748,7 +847,7 @@ function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   $('screen-'+name).classList.add('active');
   document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
-  const navMap={learn:0,courses:1,practice:2,kana:3,words:4};
+  const navMap={learn:0,courses:1,practice:2,kana:3,sentences:4,words:5};
   if(navMap[name]!==undefined) document.querySelectorAll('nav button')[navMap[name]].classList.add('active');
   if(name==='learn'){ renderToday(); }
   if(name==='kana'){ renderKana(); renderKanaPractice(); }
@@ -820,6 +919,15 @@ function renderToday(){
   }
   html += `<h2 class="section" style="margin-top:16px">📚 全部课程</h2>
     <div class="sub">每天一课，独立可选 · 点开任意一天复习 · 词库共 ${WORDS.length} 词（已掌握 ${mastered}）</div>`;
+  html += `<div class="card" style="border:2px solid var(--blue);background:#f0faff">
+      <div style="font-weight:800;font-size:16px">💬 常用语句 · ${SENTENCES.length} 句</div>
+      <div style="font-size:13px;color:var(--blue-dark);margin-top:4px">问候/自我介绍/礼貌/点餐/问路/应急/时间/天气 8 大场景，从单词进阶到句子</div>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn blue" onclick="showSentences()">📖 学语句</button>
+        <button class="btn blue" onclick="startSentenceQuiz('mixed')">🎯 练句子</button>
+        <button class="btn" onclick="startSpeakQuiz()">🎤 跟读打分</button>
+      </div>
+    </div>`;
   html += courseListHtml('learn');
   $('todayInfo').innerHTML = html;
 }
@@ -879,6 +987,170 @@ function flashAnswer(known){
   saveState();
   flashIdx++;
   renderFlash();
+}
+
+/* ============ 常用语句（与 sentences.md 同步） ============ */
+let sentFilter = '';
+let quizIsSentence = false;
+function showSentences(){
+  showScreen('sentences');
+  renderSentenceTabs('');
+}
+function renderSentenceTabs(sel){
+  sentFilter = sel || '';
+  let tabs = `<button class="kana-tab ${sentFilter===''?'active':''}" onclick="renderSentenceTabs('')">全部 ${SENTENCES.length}</button>`;
+  SENT_CATS.forEach(c=>{
+    const n = SENTENCES.filter(s=>s.cat===c).length;
+    tabs += `<button class="kana-tab ${sentFilter===c?'active':''}" onclick="renderSentenceTabs('${c}')">${SENT_ICONS[c]} ${c} ${n}</button>`;
+  });
+  $('sentSceneTabs').innerHTML = tabs;
+  const list = sentFilter ? SENTENCES.filter(s=>s.cat===sentFilter) : SENTENCES;
+  let html = '';
+  list.forEach((s,i)=>{
+    html += `<div class="card" style="padding:14px 18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div style="flex:1">
+          <div style="font-size:22px;font-weight:800;color:#1f1f1f">${s.jp}</div>
+          <div class="romaji" style="font-size:14px;margin-top:2px">${s.rom}</div>
+          <div style="font-size:16px;font-weight:700;margin-top:8px">${s.cn}</div>
+          <div style="font-size:12px;color:var(--sub);margin-top:4px">💡 ${s.memo}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:center">
+          <button class="speak-btn" style="width:46px;height:46px;font-size:20px" onclick="speak('${s.jp}')">🔊</button>
+          <button class="btn blue small" onclick="startSpeakQuiz('${s.cat}')">🎤 跟读</button>
+        </div>
+      </div>
+    </div>`;
+  });
+  $('sentList').innerHTML = html;
+}
+function startSentenceQuiz(mode, cat){
+  quizIsSentence = true;
+  quizMode = mode||'mixed';
+  const pool = cat ? SENTENCES.filter(s=>s.cat===cat) : SENTENCES;
+  const words = sample(pool, Math.min(8, pool.length));
+  if(!words.length){ toast('本场景还没有句子'); return; }
+  quizQuestions = words.map(w=>makeQuestion(w, words, pool));
+  quizIdx = 0; quizCorrect = 0; quizStreak = 0; quizWrongList = [];
+  quizTotal = quizQuestions.length;
+  showScreen('quiz');
+  renderQuiz();
+}
+function startSentenceMatch(cat){
+  quizIsSentence = true;
+  matchMode = 'sentence';
+  let pool = cat ? SENTENCES.filter(s=>s.cat===cat) : SENTENCES;
+  if(pool.length<4) pool = SENTENCES;
+  matchPairs = sample(pool, Math.min(6, pool.length));
+  matchLeft = shuffle(matchPairs.map(p=>p.jp));
+  matchRight = shuffle(matchPairs.map(p=>p.cn));
+  matchSelL = null; matchSelR = null; matchDone = 0;
+  quizCorrect = 0; quizWrongList = [];
+  quizTotal = matchPairs.length;
+  showScreen('quiz');
+  renderMatch();
+}
+
+/* ============ 跟读打分（Web Speech API 语音识别） ============ */
+let speakQ=[], speakIdx=0, speakScore=0, speakTotal=0, recognizer=null, recogOn=false;
+function srSupported(){ return !!(window.SpeechRecognition||window.webkitSpeechRecognition); }
+function startSpeakQuiz(cat){
+  const pool = cat ? SENTENCES.filter(s=>s.cat===cat) : SENTENCES;
+  speakQ = sample(pool, Math.min(5, pool.length));
+  speakIdx = 0; speakScore = 0; speakTotal = speakQ.length;
+  if(!srSupported()){ toast('当前浏览器不支持语音识别，请用 Chrome/Edge 打开公网版'); showSentences(); return; }
+  quizIsSentence = true;
+  showScreen('quiz');
+  renderSpeak();
+}
+function renderSpeak(){
+  if(speakIdx >= speakTotal){
+    const pct = Math.round(speakScore/speakTotal*100);
+    state.xp += Math.round(speakScore/2); saveState(); ensureStreak();
+    showResult(pct>=80?'great':(pct>=50?'ok':'keep'), speakScore, speakTotal-speakScore);
+    return;
+  }
+  const s = speakQ[speakIdx];
+  $('quizProgress').textContent = `跟读打分 ${speakIdx+1}/${speakTotal} · ${s.cat}`;
+  $('quizStreak').textContent = `🎤 ${speakScore}分`;
+  $('quizBar').style.width = (speakIdx/speakTotal*100)+'%';
+  $('quizArea').innerHTML = `
+    <div class="quiz-prompt">先听标准发音，再跟读打分</div>
+    <div class="quiz-target" style="font-size:30px">${s.jp}</div>
+    <div class="romaji" style="text-align:center">${s.rom}</div>
+    <div style="text-align:center;font-weight:700;margin-top:8px">${s.cn}</div>
+    <div style="text-align:center;margin-top:6px"><button class="audio-hint" onclick="speak('${s.jp}')">🔊 标准发音</button></div>
+    <div style="text-align:center;margin-top:16px">
+      <button class="btn blue" id="recBtn" onclick="toggleRecog('${s.jp}')">🎤 点击跟读</button>
+    </div>
+    <div id="recResult" style="text-align:center;margin-top:14px;min-height:40px;font-size:15px">
+      <span style="color:var(--sub)">点录音后大声读出来，说完自动打分</span>
+    </div>`;
+}
+function toggleRecog(target){
+  if(recogOn){ stopRecog(); return; }
+  const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+  recognizer = new SR();
+  recognizer.lang = 'ja-JP';
+  recognizer.interimResults = false;
+  recognizer.maxAlternatives = 3;
+  recogOn = true;
+  const btn = $('recBtn');
+  btn.textContent = '⏹ 停止录音'; btn.style.background='var(--red)'; btn.style.boxShadow='0 4px 0 #d33131';
+  $('recResult').innerHTML = '<span style="color:var(--blue-dark)">🎧 正在听…请跟读</span>';
+  recognizer.onresult = (e)=>{
+    const heard = [...e.results[0]].map(r=>r.transcript).join('');
+    gradeSpeak(target, heard);
+  };
+  recognizer.onerror = (e)=>{
+    if(e.error==='not-allowed'){ $('recResult').innerHTML = '<span style="color:var(--red)">❌ 麦克风被拒绝，请在浏览器地址栏允许麦克风权限</span>'; }
+    else if(e.error==='no-speech'){ $('recResult').innerHTML = '<span style="color:var(--red)">🔇 没听到声音，再试一次</span>'; }
+    else { $('recResult').innerHTML = `<span style="color:var(--red)">识别出错（${e.error}），再试一次</span>`; }
+    resetRecBtn();
+  };
+  recognizer.onend = ()=>{ resetRecBtn(); };
+  recognizer.start();
+}
+function stopRecog(){ try{ recognizer && recognizer.stop(); }catch(e){} resetRecBtn(); }
+function resetRecBtn(){
+  recogOn = false;
+  const btn = $('recBtn');
+  if(btn){ btn.textContent = '🎤 点击跟读'; btn.style.background=''; btn.style.boxShadow=''; }
+}
+function normTxt(s){
+  // 归一化：去掉标点/空白/促音小字，方便对比
+  return (s||'').replace(/[。、，！？!?・〜～\s（）()]/g,'').replace(/っ/g,'つ').replace(/ゃ/g,'や').replace(/ゅ/g,'ゆ').replace(/ょ/g,'よ');
+}
+function simScore(a,b){
+  // 字符级相似度（基于最长公共子序列的简单近似：逐字符命中率）
+  if(!a||!b) return 0;
+  if(a===b) return 1;
+  const short = a.length<=b.length ? a : b, long = a===short ? b : a;
+  let hit=0, idx=0;
+  for(const ch of short){ const p = long.indexOf(ch, idx); if(p>=0){ hit++; idx = p+1; } }
+  return hit/long.length;
+}
+function gradeSpeak(target, heard){
+  const s = speakQ[speakIdx];
+  const t = normTxt(target), h = normTxt(heard);
+  const sim = simScore(t, h);
+  let score, emoji, comment;
+  if(sim>=0.9){ score=100; emoji='🏆'; comment='完美！发音超标准'; }
+  else if(sim>=0.7){ score=85; emoji='🌟'; comment='很棒！已经很接近了'; }
+  else if(sim>=0.5){ score=65; emoji='👍'; comment='不错！再练一遍更顺'; }
+  else { score=40; emoji='💪'; comment='差一点，多听几遍再试'; }
+  speakScore += score;
+  const pct = Math.round(sim*100);
+  $('recResult').innerHTML = `
+    <div style="font-size:26px">${emoji} ${score}分</div>
+    <div style="color:var(--sub);font-size:13px;margin-top:6px">${comment}</div>
+    <div style="margin-top:8px;background:#f5f5f5;border-radius:10px;padding:10px">
+      <div style="font-size:13px;color:var(--sub)">标准：${s.jp}</div>
+      <div style="font-size:13px;color:var(--sub)">你读：${heard||'（没识别到）'}</div>
+      <div style="font-size:12px;color:var(--sub);margin-top:4px">相似度 ${pct}%</div>
+    </div>`;
+  resetRecBtn();
+  setTimeout(()=>{ speakIdx++; renderSpeak(); }, 3200);
 }
 
 /* ============ 练习 ============ */
@@ -1139,7 +1411,8 @@ function answerQuiz(i, el){
 function retryWrong(){
   if(quizWrongList.length===0){ toast('这次没有错题，太棒了！'); return; }
   if(quizMode.startsWith('kana')||quizMode==='match'){ toast('此模式暂不支持错题重练'); return; }
-  quizQuestions = quizWrongList.map(w=>({w, type:'jp2cn', opts:shuffle([w,...sample(WORDS.filter(x=>x.jp!==w.jp),3)])}));
+  const distPool = quizIsSentence ? SENTENCES : WORDS;
+  quizQuestions = quizWrongList.map(w=>({w, type:'jp2cn', opts:shuffle([w,...sample(distPool.filter(x=>x.jp!==w.jp),3)])}));
   quizIdx=0; quizCorrect=0; quizStreak=0; quizWrongList=[];
   quizTotal = quizQuestions.length;
   showScreen('quiz'); renderQuiz();
@@ -1336,14 +1609,31 @@ function showPractice(){
       {m:'listen', n:'听力选词', d:'听发音选词', icon:'👂'},
       {m:'mixed', n:'综合混练', d:'三种题型随机', icon:'🎲'},
       {m:'match', n:'配对连线', d:'日语 ↔ 中文配对', icon:'🔗'}
+    ]},
+    {title:'💬 语句练习', sub:'常用语句 8 大场景 · 72 句，学以致用', items:[
+      {m:'s-mixed', n:'语句综合练习', d:'全场景句子混合抽练', icon:'💬', s:'s'},
+      {m:'s-match', n:'句子配对', d:'日语句 ↔ 中文配对', icon:'🔗', s:'s'},
+      {m:'s-listen', n:'听句选意', d:'听句子选中文意思', icon:'👂', s:'s'},
+      {m:'speak', n:'🎤 跟读打分', d:'读句子 AI 打分（Chrome 推荐）', icon:'🎤', s:'s'}
     ]}
   ];
   let html = '';
   groups.forEach(g=>{
     html += `<div class="practice-group"><div class="pg-title">${g.title}</div><div class="pg-sub">${g.sub}</div><div class="practice-grid">`;
     g.items.forEach(it=>{
-      html += `<div class="practice-item" onclick="startQuiz('${it.m}', null, '${it.script||'hira'}')">
-        <div class="pi-icon">${it.icon}</div><div class="pi-name">${it.n}</div><div class="pi-desc">${it.d}</div></div>`;
+      if(it.m==='speak'){
+        html += `<div class="practice-item" onclick="startSpeakQuiz()">
+          <div class="pi-icon">${it.icon}</div><div class="pi-name">${it.n}</div><div class="pi-desc">${it.d}</div></div>`;
+      } else if(it.m==='s-match'){
+        html += `<div class="practice-item" onclick="startSentenceMatch()">
+          <div class="pi-icon">${it.icon}</div><div class="pi-name">${it.n}</div><div class="pi-desc">${it.d}</div></div>`;
+      } else if(it.m==='s-listen'){
+        html += `<div class="practice-item" onclick="startSentenceQuiz('listen')">
+          <div class="pi-icon">${it.icon}</div><div class="pi-name">${it.n}</div><div class="pi-desc">${it.d}</div></div>`;
+      } else {
+        html += `<div class="practice-item" onclick="startSentenceQuiz('mixed')">
+          <div class="pi-icon">${it.icon}</div><div class="pi-name">${it.n}</div><div class="pi-desc">${it.d}</div></div>`;
+      }
     });
     html += `</div></div>`;
   });
