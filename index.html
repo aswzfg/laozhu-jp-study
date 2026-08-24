@@ -1181,6 +1181,32 @@ function startSpeakQuiz(cat){
   showScreen('quiz');
   renderSpeak();
 }
+/* 今日必会：从混合文本中提取日语片段（假名/日文汉字），供发音跟读 */
+function jpForSpeak(text){
+  if(typeof text !== 'string') return '';
+  const m = text.match(/[ぁ-ゖァ-ヺー一-龯々〆ヶ]+/g)||[];
+  if(m.length===0) return '';
+  let keep = m.length===1 ? m : m.filter(s=>s.length>=2);
+  if(keep.length===0) keep = m;
+  return keep.join('、');
+}
+/* 今日必会：跟读打分（复用 renderSpeak，对象格式 {jp,cn} 或含假名字符串均可） */
+function startSpeakPhrases(id){
+  const L = LESSONS.find(x=>x.id===id);
+  if(!L) return;
+  const items = [];
+  L.phrases.forEach(p=>{
+    const jp = (typeof p==='object' && p.jp) ? p.jp : jpForSpeak(p);
+    if(jp) items.push({jp:jp, cn:(typeof p==='object'&&p.cn)?p.cn:'', cat:'今日必会'});
+  });
+  if(items.length===0){ toast('本课必会暂无日语发音'); return; }
+  if(!srSupported()){ toast('当前浏览器不支持语音识别，请用 Chrome/Edge 打开公网版'); showCourses(); return; }
+  speakQ = sample(items, Math.min(5, items.length));
+  speakIdx = 0; speakScore = 0; speakTotal = speakQ.length;
+  quizIsSentence = true;
+  showScreen('quiz');
+  renderSpeak();
+}
 function renderSpeak(){
   if(speakIdx >= speakTotal){
     const pct = Math.round(speakScore/speakTotal*100);
@@ -1804,8 +1830,21 @@ function openLesson(id, from){
   });
   html += `</div>`;
   // 短语
-  html += `<div class="card"><div style="font-weight:700;margin-bottom:8px">今日必会</div>`;
-  L.phrases.forEach(p=>{ html += `<div style="font-size:14px;padding:4px 0">• ${p}</div>`; });
+  html += `<div class="card"><div style="font-weight:700;margin-bottom:8px">今日必会（点🔊听发音）</div>`;
+  L.phrases.forEach(p=>{
+    const isObj = (typeof p==='object' && p.jp);
+    const jp = isObj ? p.jp : jpForSpeak(p);
+    const cn = isObj ? (p.cn||'') : '';
+    const shown = isObj ? `<span class="jp">${p.jp}</span><span class="cn">${cn}</span>` : `<span>${p}</span>`;
+    if(jp){
+      html += `<div class="word-item" style="padding:8px 6px" onclick="speak('${jp.replace(/'/g,"\\'")}')">${shown}<span style="font-size:15px">🔊</span></div>`;
+    } else {
+      html += `<div style="font-size:14px;padding:4px 0">• ${shown}</div>`;
+    }
+  });
+  if(L.phrases.some(p=>(typeof p==='object'&&p.jp)||jpForSpeak(p))){
+    html += `<button class="btn block" style="margin-top:8px" onclick="startSpeakPhrases(${L.id})">🎤 跟读本课必会（AI打分）</button>`;
+  }
   html += `</div>`;
   // 练习
   html += `<div class="card"><div style="font-weight:700;margin-bottom:8px">小练习（心里默答）</div>`;
