@@ -234,16 +234,6 @@ main{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
       <div class="home-menu-item" onclick="showProgress()"><div class="mi-icon">📊</div><div class="mi-name">进度</div><div class="mi-desc">打卡掌握统计</div></div>
     </div>
     <div id="todayInfo"></div>
-    <h2 class="section">自由练习</h2>
-    <div class="sub">不限课程，从全部词库抽词巩固</div>
-    <div class="btn-row">
-      <button class="btn blue" onclick="showPractice()">🎯 练习中心</button>
-      <button class="btn blue" onclick="startFlash()">🃏 闪卡速记</button>
-    </div>
-    <div class="btn-row">
-      <button class="btn white" onclick="startQuiz('listen')">👂 听力选词</button>
-      <button class="btn white" onclick="showWordList()">📖 全部词库</button>
-    </div>
   </section>
 
   <!-- 练习页 -->
@@ -1108,8 +1098,6 @@ function courseListHtml(from){
   return html;
 }
 function renderToday(){
-  const due = WORDS.filter(w=>masteryOf(w.jp)!=='mastered').length;
-  const mastered = WORDS.length - due;
   const todayL = LESSONS.find(L=>L.date===todayPadded());
   let html = '';
   if(todayL){
@@ -1121,19 +1109,9 @@ function renderToday(){
       <div style="font-size:13px;color:var(--blue-dark);margin-top:4px">${todayL.title} · ${todayL.tag}</div>
       <button class="btn block" style="margin-top:12px" onclick="openLesson(${todayL.id},'learn')">▶ 开始今日学习</button>
     </div>`;
+  } else {
+    html += `<div class="card" style="text-align:center;color:var(--sub)">今天没有新课，点上方「课程」复习旧课 🐯</div>`;
   }
-  html += `<h2 class="section" style="margin-top:16px">📚 全部课程</h2>
-    <div class="sub">每天一课，独立可选 · 点开任意一天复习 · 词库共 ${WORDS.length} 词（已掌握 ${mastered}）</div>`;
-  html += `<div class="card" style="border:2px solid var(--blue);background:#f0faff">
-      <div style="font-weight:800;font-size:16px">💬 常用语句 · ${SENTENCES.length} 句</div>
-      <div style="font-size:13px;color:var(--blue-dark);margin-top:4px">问候/自我介绍/礼貌/点餐/问路/应急/时间/天气 8 大场景，从单词进阶到句子</div>
-      <div class="btn-row" style="margin-top:12px">
-        <button class="btn blue" onclick="showSentences()">📖 学语句</button>
-        <button class="btn blue" onclick="startSentenceQuiz('mixed')">🎯 练句子</button>
-        <button class="btn" onclick="startSpeakQuiz()">🎤 跟读打分</button>
-      </div>
-    </div>`;
-  html += courseListHtml('learn');
   $('todayInfo').innerHTML = html;
 }
 
