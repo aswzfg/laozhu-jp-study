@@ -1084,12 +1084,14 @@ function courseListHtml(from){
     html += `<div class="card" style="cursor:pointer" onclick="openLesson(${L.id},'${from}')">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
         <span style="font-weight:800;font-size:16px">第 ${L.id} 课 · ${L.title}
-          ${isToday?'<span style="background:var(--green);color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px">今日</span>':''}</span>
+          ${isToday?'<span style="background:var(--green);color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;margin-left:6px">今日</span>':''}
+          ${lessonBadge(L.id)}</span>
         <span style="font-size:12px;color:var(--sub)">${L.date}</span>
       </div>
       <div style="font-size:13px;color:var(--blue-dark);margin-top:4px">${L.tag}</div>
       <div style="display:flex;gap:8px;margin-top:10px">
         <button class="btn small" onclick="event.stopPropagation();openLesson(${L.id},'${from}')">📖 复习本课</button>
+        <button class="btn red small" onclick="event.stopPropagation();startLessonQuiz(${L.id})">📝 测验</button>
         <button class="btn blue small" onclick="event.stopPropagation();startQuiz('mixed',${L.id})">🎯 本课练习</button>
         <button class="btn white small" onclick="event.stopPropagation();startFlash(${L.id})">🃏 本课闪卡</button>
       </div>
@@ -1369,7 +1371,7 @@ function startQuiz(mode, lessonId, script){
   if(quizMode==='kana2rom'||quizMode==='rom2kana'||quizMode==='kanaListen'||quizMode==='kanaMixed'){ startKanaQuiz(quizMode, script); return; }
   if(quizMode==='match'){ startMatchQuiz(lessonId); return; }
   const L = lessonId ? LESSONS.find(x=>x.id===lessonId) : null;
-  let words = L ? lessonWords(L) : pickLearningWords(12);
+  let words = L ? (lessonQuizCtx ? lessonQuizWords(L) : lessonWords(L)) : pickLearningWords(12);
   if(!words.length){ toast('本课还没有单词'); return; }
   const distPool = L ? WORDS : words;
   quizQuestions = words.map(w=>makeQuestion(w, words, distPool));
@@ -1536,6 +1538,17 @@ function renderQuiz(){
   if(quizIdx >= quizQuestions.length){
     state.xp += quizCorrect*2; saveState(); ensureStreak();
     const pct = Math.round(quizCorrect/quizTotal*100);
+    window._quizNote = '';
+    if(lessonQuizCtx){
+      const lid = lessonQuizCtx.lessonId; lessonQuizCtx = null;
+      const passed = pct >= 75;
+      const stats = loadLessonStats();
+      const prev = stats[lid]||{};
+      stats[lid] = {done: !!(prev.done||passed), best: Math.max(prev.best||0, quizCorrect), total: quizTotal, attempts:(prev.attempts||0)+1};
+      saveLessonStats(stats);
+      if(passed){ state.xp += 20; saveState(); window._quizNote = `🎉 测验通过（${quizCorrect}/${quizTotal}）！第 ${lid} 课已标记「已学完」，+20 XP`; }
+      else { window._quizNote = `测验 ${quizCorrect}/${quizTotal}，未达 75%，本课暂未标记完成，可随时重测`; }
+    }
     showResult(pct>=80?'great':(pct>=50?'ok':'keep'), quizCorrect, quizTotal-quizCorrect);
     return;
   }
@@ -1636,10 +1649,17 @@ function showResult(level, correct, wrong){
   $('resIcon').textContent = r.icon;
   $('resTitle').textContent = r.title;
   $('resSub').textContent = r.sub;
+  let noteHtml = '';
+  if(window._quizNote){
+    const ok = window._quizNote.includes('通过');
+    noteHtml = `<div style="width:100%;text-align:center;margin-top:10px;font-weight:700;font-size:14px;color:${ok?'var(--green-dark)':'#8a6d00'};background:${ok?'#d7ffb8':'#fff3cd'};border-radius:10px;padding:10px">${window._quizNote}</div>`;
+    window._quizNote = '';
+  }
   $('resCount').innerHTML = `
     <div class="cc-item"><div class="n good">${correct}</div><div class="l">答对</div></div>
     <div class="cc-item"><div class="n bad">${wrong}</div><div class="l">答错</div></div>
-    <div class="cc-item"><div class="n" style="color:var(--yellow)">+${correct*2}</div><div class="l">XP</div></div>`;
+    <div class="cc-item"><div class="n" style="color:var(--yellow)">+${correct*2}</div><div class="l">XP</div></div>
+    ${noteHtml}`;
   showScreen('result');
 }
 
@@ -1938,6 +1958,10 @@ function openLesson(id, from){
   html += `<div class="card"><div style="font-weight:700;margin-bottom:8px">小练习（心里默答）</div>`;
   L.quiz.forEach((q,i)=>{ html += `<div style="font-size:14px;padding:4px 0;color:var(--sub)">${i+1}. ${q}</div>`; });
   html += `</div>`;
+  html += `<div class="card"><div style="font-weight:700;margin-bottom:6px">📝 本课小测验</div>
+    <div style="font-size:13px;color:var(--sub)">本课单词+必会短语，答对 75% 以上标记「已学完」；未通过可反复重测，成绩取最好</div>
+    <button class="btn red block" style="margin-top:10px" onclick="startLessonQuiz(${L.id})">📝 开始本课测验</button>
+    <div style="font-size:12px;margin-top:8px">${lessonBadge(L.id)}</div></div>`;
   html += `<button class="btn blue block" onclick="startQuiz('mixed',${L.id})">🎯 本课练习（只出本课单词）</button>`;
   html += `<button class="btn block" style="margin-top:10px" onclick="startFlash(${L.id})">🃏 本课闪卡</button>`;
   $('courseDetail').innerHTML = html;
@@ -2117,14 +2141,44 @@ function showWordList(){
   $('wordCount').innerHTML = `共 ${WORDS.length} 个单词 · 按${DIM_LABEL[wordDim]}分组 · 点词听发音 · 组标题可折叠`;
   renderWordLibrary();
 }
+/* ===== 课程测验与完成状态（2026-08-25）===== */
+let lessonQuizCtx = null;
+function loadLessonStats(){ try{ return JSON.parse(localStorage.getItem('jp_lessonStats')||'{}'); }catch(e){ return {}; } }
+function saveLessonStats(s){ localStorage.setItem('jp_lessonStats', JSON.stringify(s)); }
+function lessonQuizWords(L){
+  const ws = lessonWords(L);
+  const ps = (L.phrases||[]).filter(p=>typeof p==='object'&&p.jp).map(p=>({jp:p.jp, cn:p.cn||'', rom:''}));
+  return ws.concat(ps);
+}
+function lessonBadge(id){
+  const s = loadLessonStats()[id];
+  if(!s) return '<span style="font-size:11px;color:var(--sub);border:1px solid var(--line);border-radius:8px;padding:2px 6px">未开始</span>';
+  if(s.done) return '<span style="font-size:11px;color:var(--green-dark);background:#d7ffb8;border-radius:8px;padding:2px 6px">✅ 已学完</span>';
+  return `<span style="font-size:11px;color:#8a6d00;background:#fff3cd;border-radius:8px;padding:2px 6px">🔄 最佳 ${s.best}/${s.total}</span>`;
+}
+function startLessonQuiz(id){
+  const L = LESSONS.find(x=>x.id===id); if(!L) return;
+  lessonQuizCtx = {lessonId:id};
+  startQuiz('mixed', id);
+}
 function showProgress(){
+
   showScreen('words');
   const mastered = WORDS.filter(w=>masteryOf(w.jp)==='mastered').length;
   const learning = WORDS.filter(w=>masteryOf(w.jp)==='learning').length;
   const fresh = WORDS.length-mastered-learning;
   const da = dispAnswered();
   const acc = da.t ? Math.round(da.c/da.t*100) : 0;
-  $('wordCount').innerHTML = `
+  const lstats = loadLessonStats();
+  const doneN = LESSONS.filter(L=>lstats[L.id]&&lstats[L.id].done).length;
+  let courseHtml = `<div class="card"><div style="font-weight:800;margin-bottom:6px">📚 课程进度 · ${doneN}/${LESSONS.length} 课已学完</div>`;
+  [...LESSONS].reverse().forEach(L=>{
+    const s = lstats[L.id];
+    const b = !s ? '<span style="color:var(--sub)">未开始</span>' : (s.done ? '<span style="color:var(--green-dark);font-weight:700">✅ 已学完</span>' : `<span style="color:#8a6d00">🔄 最佳 ${s.best}/${s.total}（${s.attempts}次）</span>`);
+    courseHtml += `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px"><span>第 ${L.id} 课 · ${L.title}</span><span>${b}</span></div>`;
+  });
+  courseHtml += `</div>`;
+  $('wordCount').innerHTML = courseHtml + `
     <div class="stat-row">
       <div class="stat"><div class="num">${dispStreak()}</div><div class="l">🔥 连续天数</div></div>
       <div class="stat"><div class="num">${dispXp()}</div><div class="l">⭐ 总 XP</div></div>
