@@ -146,6 +146,49 @@ h2.section{font-size:20px;font-weight:800;margin:8px 0 4px}
 
 .hidden{display:none!important}
 footer{text-align:center;color:#bbb;font-size:12px;padding:16px}
+
+/* ===== 响应式优化 2026-08-25 ===== */
+/* iPhone 安全区（刘海/底部横条） */
+header{padding-top:max(10px, env(safe-area-inset-top))}
+nav{padding-bottom:env(safe-area-inset-bottom)}
+main{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+/* 长词防溢出 */
+.jp-big,.quiz-target,.match-target{overflow-wrap:anywhere;word-break:break-word;line-height:1.25}
+/* 手机窄屏 */
+@media (max-width:480px){
+  header{padding:8px 12px}
+  .logo{font-size:16px}.logo .tiger{font-size:19px}
+  .xp{padding:3px 8px;font-size:12px}
+  main{padding:12px}
+  .jp-big{font-size:44px}
+  .quiz-target{font-size:38px}
+  .flash-card{min-height:210px}
+  .word-item .jp{min-width:0;font-size:16px;flex-shrink:1}
+  .word-item .cn{font-size:13px}
+  .opt{font-size:15px;padding:14px 8px;min-height:52px}
+  .match-item.jp{font-size:16px}.match-item.cn{font-size:14px}
+  .kana-cell{padding:10px 2px}
+  .kana-cell .k{font-size:20px}
+  .stat .num{font-size:22px}
+  nav button{padding:8px 0 6px;font-size:10px}
+  nav button .icon{font-size:20px}
+}
+@media (max-width:360px){
+  .options{grid-template-columns:1fr}
+  .jp-big{font-size:38px}
+  .quiz-target{font-size:34px}
+  .btn-row{flex-direction:column}
+  .kana-grid{gap:5px}
+}
+/* 桌面端加宽 */
+@media (min-width:900px){
+  main{max-width:860px}
+  .flash-card{min-height:280px}
+  .jp-big{font-size:60px}
+  .card{padding:24px}
+  .quiz-target{font-size:52px}
+}
+
 </style>
 </head>
 <body>
