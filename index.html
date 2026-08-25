@@ -1541,13 +1541,13 @@ function renderQuiz(){
     window._quizNote = '';
     if(lessonQuizCtx){
       const lid = lessonQuizCtx.lessonId; lessonQuizCtx = null;
-      const passed = pct >= 75;
+      const passed = (quizTotal - quizCorrect) <= 1;
       const stats = loadLessonStats();
       const prev = stats[lid]||{};
       stats[lid] = {done: !!(prev.done||passed), best: Math.max(prev.best||0, quizCorrect), total: quizTotal, attempts:(prev.attempts||0)+1};
       saveLessonStats(stats);
-      if(passed){ state.xp += 20; saveState(); window._quizNote = `🎉 测验通过（${quizCorrect}/${quizTotal}）！第 ${lid} 课已标记「已学完」，+20 XP`; }
-      else { window._quizNote = `测验 ${quizCorrect}/${quizTotal}，未达 75%，本课暂未标记完成，可随时重测`; }
+      if(passed){ state.xp += 20; saveState(); window._quizNote = `🎉 测验通过（${quizCorrect}/${quizTotal}，最多错1题）！第 ${lid} 课已标记「已学完」，+20 XP`; }
+      else { window._quizNote = `测验 ${quizCorrect}/${quizTotal}，错 ${quizTotal-quizCorrect} 题，需错≤1题才合格，本课暂未标记完成，可随时重测`; }
     }
     showResult(pct>=80?'great':(pct>=50?'ok':'keep'), quizCorrect, quizTotal-quizCorrect);
     return;
@@ -1959,7 +1959,7 @@ function openLesson(id, from){
   L.quiz.forEach((q,i)=>{ html += `<div style="font-size:14px;padding:4px 0;color:var(--sub)">${i+1}. ${q}</div>`; });
   html += `</div>`;
   html += `<div class="card"><div style="font-weight:700;margin-bottom:6px">📝 本课小测验</div>
-    <div style="font-size:13px;color:var(--sub)">本课单词+必会短语，答对 75% 以上标记「已学完」；未通过可反复重测，成绩取最好</div>
+    <div style="font-size:13px;color:var(--sub)">本课单词+必会短语共 ${lessonQuizWords(L).length} 题，最多错 1 题才合格（10题对9/8题对7）；可反复重测，成绩取最好</div>
     <button class="btn red block" style="margin-top:10px" onclick="startLessonQuiz(${L.id})">📝 开始本课测验</button>
     <div style="font-size:12px;margin-top:8px">${lessonBadge(L.id)}</div></div>`;
   html += `<button class="btn blue block" onclick="startQuiz('mixed',${L.id})">🎯 本课练习（只出本课单词）</button>`;
@@ -2148,7 +2148,15 @@ function saveLessonStats(s){ localStorage.setItem('jp_lessonStats', JSON.stringi
 function lessonQuizWords(L){
   const ws = lessonWords(L);
   const ps = (L.phrases||[]).filter(p=>typeof p==='object'&&p.jp).map(p=>({jp:p.jp, cn:p.cn||'', rom:''}));
-  return ws.concat(ps);
+  let pool = ws.concat(ps);
+  const target = pool.length >= 10 ? 10 : 8;
+  if(pool.length < target){
+    const have = new Set(pool.map(w=>w.jp));
+    const extra = WORDS.filter(w=>!have.has(w.jp));
+    for(let i=extra.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [extra[i],extra[j]]=[extra[j],extra[i]]; }
+    pool = pool.concat(extra.slice(0, target-pool.length));
+  }
+  return pool;
 }
 function lessonBadge(id){
   const s = loadLessonStats()[id];
