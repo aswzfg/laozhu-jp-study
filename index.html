@@ -200,6 +200,16 @@ main{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
   .quiz-target{font-size:52px}
 }
 
+
+/* 首页功能入口（2026-08-25） */
+.home-menu{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+.home-menu-item{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:16px 10px;text-align:center;cursor:pointer;transition:all .12s;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.home-menu-item:active{transform:scale(.96);background:#f0f0f0}
+.home-menu-item .mi-icon{font-size:28px;line-height:1.2}
+.home-menu-item .mi-name{font-size:15px;font-weight:800;margin-top:4px}
+.home-menu-item .mi-desc{font-size:11px;color:var(--sub);margin-top:2px}
+@media (min-width:600px){.home-menu{grid-template-columns:repeat(3,1fr)}}
+
 </style>
 </head>
 <body>
@@ -215,6 +225,14 @@ main{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
 <main>
   <!-- 首页/学习 -->
   <section id="screen-learn" class="screen active">
+    <div class="home-menu">
+      <div class="home-menu-item" onclick="showCourses()"><div class="mi-icon">📚</div><div class="mi-name">课程</div><div class="mi-desc">每日一课复习</div></div>
+      <div class="home-menu-item" onclick="showPractice()"><div class="mi-icon">🎯</div><div class="mi-name">练习</div><div class="mi-desc">6种模式开练</div></div>
+      <div class="home-menu-item" onclick="showKana()"><div class="mi-icon">あ</div><div class="mi-name">五十音</div><div class="mi-desc">平假名片假名</div></div>
+      <div class="home-menu-item" onclick="showSentences()"><div class="mi-icon">💬</div><div class="mi-name">语句</div><div class="mi-desc">8大场景72句</div></div>
+      <div class="home-menu-item" onclick="showWordList()"><div class="mi-icon">📖</div><div class="mi-name">词汇</div><div class="mi-desc">全部词库分类</div></div>
+      <div class="home-menu-item" onclick="showProgress()"><div class="mi-icon">📊</div><div class="mi-name">进度</div><div class="mi-desc">打卡掌握统计</div></div>
+    </div>
     <div id="todayInfo"></div>
     <h2 class="section">自由练习</h2>
     <div class="sub">不限课程，从全部词库抽词巩固</div>
