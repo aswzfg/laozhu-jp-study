@@ -180,9 +180,20 @@ main{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
   .btn-row{flex-direction:column}
   .kana-grid{gap:5px}
 }
-/* 桌面端加宽 */
-@media (min-width:900px){
-  main{max-width:860px}
+/* 桌面端 1024×768 适配 */
+@media (min-width:1024px) and (max-width:1366px){
+  main{max-width:960px}
+  .card{padding:20px}
+  .flash-card{min-height:250px}
+  .jp-big{font-size:54px}
+  .quiz-target{font-size:46px}
+  .match-target{font-size:34px}
+  header{padding:10px 20px}
+  .result-icon{font-size:52px;margin:12px 0}
+  .result-title{font-size:22px}
+}
+@media (min-width:1367px){
+  main{max-width:1040px}
   .flash-card{min-height:280px}
   .jp-big{font-size:60px}
   .card{padding:24px}
