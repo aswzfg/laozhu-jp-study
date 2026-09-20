@@ -233,7 +233,7 @@ main{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
       <div class="home-menu-item" onclick="showCourses()"><div class="mi-icon">📚</div><div class="mi-name">课程</div><div class="mi-desc">每日一课复习</div></div>
       <div class="home-menu-item" onclick="showPractice()"><div class="mi-icon">🎯</div><div class="mi-name">练习</div><div class="mi-desc">6种模式开练</div></div>
       <div class="home-menu-item" onclick="showKana()"><div class="mi-icon">あ</div><div class="mi-name">五十音</div><div class="mi-desc">平假名片假名</div></div>
-      <div class="home-menu-item" onclick="showSentences()"><div class="mi-icon">💬</div><div class="mi-name">语句</div><div class="mi-desc">8大场景72句</div></div>
+      <div class="home-menu-item" onclick="showSentences()"><div class="mi-icon">💬</div><div class="mi-name">语句</div><div class="mi-desc">9类89句</div></div>
       <div class="home-menu-item" onclick="showWordList()"><div class="mi-icon">📖</div><div class="mi-name">词汇</div><div class="mi-desc">全部词库分类</div></div>
       <div class="home-menu-item" onclick="showProgress()"><div class="mi-icon">📊</div><div class="mi-name">进度</div><div class="mi-desc">打卡掌握统计</div></div>
     </div>
@@ -998,10 +998,22 @@ const SENTENCES = [
   {cn:"谢谢(礼貌版)",jp:"ありがとうございます",rom:"arigatō gozaimasu",memo:"ありがとう+ございます(郑重)——对长辈/客户用，朋友间用ありがとう",cat:"问候寒暄"},
   /* 🙋 自我介绍（第37课 每日两句） */
   {cn:"很高兴认识你",jp:"お会いできて嬉しいです",rom:"o-ai dekite ureshii desu",memo:"お会いできて(能见到)+嬉しい(高兴)+です",cat:"自我介绍"},
-  {cn:"我正在学日语",jp:"にほんごをべんきょうしています",rom:"Nihongo o benkyō shite imasu",memo:"日本語+を+勉強しています(する→して+います)——〜ています(第37课)",cat:"自我介绍"}
+  {cn:"我正在学日语",jp:"にほんごをべんきょうしています",rom:"Nihongo o benkyō shite imasu",memo:"日本語+を+勉強しています(する→して+います)——〜ています(第37课)",cat:"自我介绍"},
+  /* 🧩 常用句型（多邻国实战补充 2026-09-20） */
+  {cn:"有～吗？",jp:"～はありますか",rom:"~ wa arimasu ka",memo:"无生命物用 あります；人/动物用 います",cat:"常用句型"},
+  {cn:"有酱油吗？",jp:"しょうゆはありますか",rom:"shōyu wa arimasu ka",memo:"～はありますか 的实例；しょう(长音)+ゆ",cat:"常用句型"},
+  {cn:"没有～",jp:"～はありません",rom:"~ wa arimasen",memo:"あります 的否定形（有→没有）",cat:"常用句型"},
+  {cn:"不…（动词否定）",jp:"～ません",rom:"~ masen",memo:"ます形转否定：食べます→食べません",cat:"常用句型"},
+  {cn:"喜欢～",jp:"～がすきです",rom:"~ ga suki desu",memo:"对象用 が，不用 を（高频易错）",cat:"常用句型"},
+  {cn:"不喜欢～",jp:"～がすきではありません",rom:"~ ga suki dewa arimasen",memo:"すき 的否定形，对象仍用 が",cat:"常用句型"},
+  {cn:"…吧（提议）",jp:"～ましょう",rom:"~ mashō",memo:"主动提议、劝诱对方一起做",cat:"常用句型"},
+  {cn:"要不要…呢？",jp:"～ましょうか",rom:"~ mashō ka",memo:"加 か 变成征求对方意见",cat:"常用句型"},
+  {cn:"我也喜欢～",jp:"～もすきです",rom:"~ mo suki desu",memo:"も 替代 は（不能说 はも）",cat:"常用句型"},
+  {cn:"我不吃生的鱼",jp:"なまの魚は食べません",rom:"nama no sakana wa tabemasen",memo:"なまの(生的)+名词+は+ません（实战例句）",cat:"常用句型"},
+  {cn:"要不要做炸猪排呢？",jp:"とんかつをつくりましょうか",rom:"tonkatsu o tsukurimashō ka",memo:"つくります(做)+ましょうか（实战例句）",cat:"常用句型"}
 ];
-const SENT_CATS = ['问候寒暄','自我介绍','礼貌万能','点餐购物','问路交通','应急表达','数字时间','天气'];
-const SENT_ICONS = {问候寒暄:'🗣️',自我介绍:'🙋',礼貌万能:'🙏',点餐购物:'🍜',问路交通:'🗺️',应急表达:'🆘',数字时间:'⏰',天气:'🌤️'};
+const SENT_CATS = ['问候寒暄','自我介绍','礼貌万能','点餐购物','问路交通','应急表达','数字时间','天气','常用句型'];
+const SENT_ICONS = {问候寒暄:'🗣️',自我介绍:'🙋',礼貌万能:'🙏',点餐购物:'🍜',问路交通:'🗺️',应急表达:'🆘',数字时间:'⏰',天气:'🌤️',常用句型:'🧩'};
 
 /* 五十音图（平假名清音） */
 const KANA = [
