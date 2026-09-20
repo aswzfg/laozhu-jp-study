@@ -76,6 +76,7 @@ h2.section{font-size:20px;font-weight:800;margin:8px 0 4px}
 .kana-cell{background:var(--card);border:2px solid var(--line);border-radius:12px;padding:12px 4px;text-align:center;cursor:pointer;transition:background .12s;box-shadow:0 2px 4px rgba(0,0,0,.04)}
 .kana-cell:active{background:#d7ffb8}
 .kana-cell .k{font-size:22px;font-weight:700}
+.kana-cell .k2{font-size:16px;font-weight:700;color:var(--blue-dark);margin-top:1px}
 .kana-cell .r{font-size:10px;color:var(--sub);margin-top:2px}
 .kana-row-label{display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--sub);white-space:nowrap;padding-right:2px}
 /* 五十音表：行标签 + 5 个假名 横向同一行 */
@@ -1089,6 +1090,22 @@ const KANA_ALL_KATA = [
   ...DAKUON_KATA.flatMap(g=>g.kana.map(([k,r])=>({k,r,jp:k}))),
   ...YOON_KATA.flatMap(g=>g.kana.map(([k,r])=>({k,r,jp:k})))
 ];
+
+/* 平假名 → 片假名 映射（按行/位序严格对齐，避开じ/ぢ 等同音冲突） */
+const KANA2KATA = (()=>{
+  const m = {};
+  [[KANA,KATAKANA],[DAKUON,DAKUON_KATA],[YOON,YOON_KATA]].forEach(([H,K])=>{
+    H.forEach((g,i)=>{
+      const kg = K[i]; if(!kg) return;
+      g.kana.forEach(([h],j)=>{
+        const kk = kg.kana[j];
+        if(h && kk && kk[0]) m[h] = kk[0];
+      });
+    });
+  });
+  return m;
+})();
+function kataOf(h){ return KANA2KATA[h] || ''; }
 
 /* ============ 状态 ============ */
 const LS_KEY = 'cc-jp-state-v1';
@@ -2747,20 +2764,20 @@ function openLesson(id, from){
       <div><div style="font-weight:800;font-size:18px">第 ${L.id} 课 · ${L.title}</div>
       <div style="font-size:12px;color:var(--sub)">${L.date}</div></div></div>`;
   // 假名
-  html += `<div class="card"><div style="font-weight:700;margin-bottom:8px">假名（点卡片听发音）</div><div class="kana-grid">`;
+  html += `<div class="card"><div style="font-weight:700;margin-bottom:8px">假名（平假名 ／ 片假名 · 点卡片听发音）</div><div class="kana-grid">`;
   L.kana.forEach(k=>{
-    html += `<div class="kana-cell" onclick="speak('${k.k}')"><div class="k">${k.k}</div><div class="r">${k.r}</div><div style="font-size:9px;color:#999;margin-top:3px">${k.memo}</div></div>`;
+    html += `<div class="kana-cell" onclick="speak('${k.k}')"><div class="k">${k.k}</div><div class="k2">${kataOf(k.k)}</div><div class="r">${k.r}</div><div style="font-size:9px;color:#999;margin-top:3px">${k.memo}</div></div>`;
   });
   html += `</div>`;
   L.kana.forEach(k=>{
-    html += `<div style="font-size:12px;color:var(--sub);margin-top:6px">${k.k}（${k.r}）${k.ex}</div>`;
+    html += `<div style="font-size:12px;color:var(--sub);margin-top:6px">${k.k} ／ ${kataOf(k.k)}（${k.r}）${k.ex}</div>`;
   });
   html += `</div>`;
   // 浊音
   if(L.dakuon){
     html += `<div class="card"><div style="font-weight:700;margin-bottom:8px">浊音（か行加两点 k→g）</div><div class="kana-grid">`;
     L.dakuon.forEach(d=>{
-      html += `<div class="kana-cell" onclick="speak('${d[0]}')"><div class="k">${d[0]}</div><div class="r">${d[1]}</div><div style="font-size:9px;color:#999;margin-top:3px">${d[2]}</div></div>`;
+      html += `<div class="kana-cell" onclick="speak('${d[0]}')"><div class="k">${d[0]}</div><div class="k2">${kataOf(d[0])}</div><div class="r">${d[1]}</div><div style="font-size:9px;color:#999;margin-top:3px">${d[2]}</div></div>`;
     });
     html += `</div></div>`;
   }
