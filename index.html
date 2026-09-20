@@ -77,7 +77,9 @@ h2.section{font-size:20px;font-weight:800;margin:8px 0 4px}
 .kana-cell:active{background:#d7ffb8}
 .kana-cell .k{font-size:22px;font-weight:700}
 .kana-cell .r{font-size:10px;color:var(--sub);margin-top:2px}
-.kana-row-label{grid-column:1/-1;font-size:12px;font-weight:700;color:var(--sub);margin-top:8px;text-align:left}
+.kana-row-label{display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--sub);white-space:nowrap;padding-right:2px}
+/* 五十音表：行标签 + 5 个假名 横向同一行 */
+#kanaTable{display:grid;grid-template-columns:auto repeat(5,1fr);gap:8px;align-items:stretch}
 
 /* 五十音切换 tab */
 .kana-tabs{display:flex;gap:8px;margin-bottom:8px}
@@ -179,6 +181,7 @@ main{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
   .quiz-target{font-size:34px}
   .btn-row{flex-direction:column}
   .kana-grid{gap:5px}
+  #kanaTable{gap:5px}
 }
 /* 桌面端 1024×768 适配 */
 @media (min-width:1024px) and (max-width:1366px){
